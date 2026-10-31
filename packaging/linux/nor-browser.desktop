@@ -1,0 +1,22 @@
+[Desktop Entry]
+Type=Application
+Name=NØR Browser
+GenericName=Web Browser
+Comment=Browse the web privately — no accounts, no telemetry, no cloud
+Comment[ar]=تصفّح الويب بخصوصية — بلا حسابات ولا تتبع ولا سحابة
+Comment[fr]=Naviguez sur le Web en privé — sans compte, sans télémétrie, sans cloud
+Exec=nor-browser %u
+Icon=nor-browser
+Terminal=false
+Categories=Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/nor;
+StartupWMClass=nor-browser
+Keywords=web;browser;internet;private;nor;
+StartupNotify=true
+Actions=NewPrivateWindow;
+
+[Desktop Action NewPrivateWindow]
+Name=New Private Window
+Name[ar]=نافذة خاصة جديدة
+Name[fr]=Nouvelle fenêtre privée
+Exec=nor-browser --private

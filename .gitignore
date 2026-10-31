@@ -1,0 +1,27 @@
+build/
+release/*.zip
+checkpoints/*.zip
+*.user
+
+# Build files
+/build/
+/cmake-build-*/
+/target/
+/CMakeFiles/
+/CMakeCache.txt
+
+# Temporary files
+*.log
+*.user
+*.swp
+*~
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Local browser data
+/user-data/
+/profiles/
+/browser-data/

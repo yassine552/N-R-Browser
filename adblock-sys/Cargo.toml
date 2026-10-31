@@ -1,0 +1,26 @@
+[package]
+name = "nor-adblock-sys"
+version = "1.0.0"
+edition = "2021"
+license = "MPL-2.0"
+publish = false
+description = "C ABI shim around the Brave adblock-rust engine for NOR Browser"
+
+[lib]
+name = "nor_adblock_sys"
+crate-type = ["staticlib"]
+
+# Pinned exactly for reproducible release builds.
+# Upstream: https://github.com/brave/adblock-rust (MPL-2.0)
+[dependencies]
+adblock = { version = "=0.13.5", default-features = false, features = [
+    "embedded-domain-resolver", # embeds the Public Suffix List (correct co.uk-style domains)
+    "full-regex-handling",      # full regex filter support
+] }
+# NOT enabling "single-thread": the engine is consulted from Qt WebEngine's
+# IO thread (request interception) AND the GUI thread (cosmetic filtering),
+# so it must stay Send + Sync; the shim serializes access with a mutex anyway.
+serde_json = "1"
+
+[profile.release]
+opt-level = 3

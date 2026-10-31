@@ -1,0 +1,596 @@
+/* ============================================================================
+   NØR Browser — chrome.qss.in  (design-system TEMPLATE)
+   "Calm graphite, one violet pulse."
+   Every %TOKEN% is substituted by Theme::applyStyleSheet() from Theme.h —
+   the single source of truth. Dark and Light share this exact structure.
+
+   What this sheet deliberately does NOT do:
+     - no gradients, no glow, no heavy shadows
+     - no accent-colored fills on menu items or large surfaces
+     - no pill radius on every control (6/8/10 steps only)
+     - no borders around hover states (overlays instead of outlines)
+   ============================================================================ */
+
+* {
+    outline: none;
+}
+
+/* ---- shell & unified header ------------------------------------------- */
+
+QWidget#shell {
+    background: %WINDOW%;
+}
+
+QWidget#chromeHeader {
+    background: %HEADER%;
+    border-bottom: 1px solid %LINE%;
+}
+
+QWidget#chromeHeader[private="true"] {
+    background: %PRIV_HEADER%;
+}
+
+/* ---- tab row (top of the header) --------------------------------------- */
+
+QTabBar#tabBar {
+    background: transparent;
+    qproperty-drawBase: 0;
+    font-size: 9.5pt;
+    min-height: %TAB_ROW%;
+}
+
+QTabBar#tabBar::tab {
+    background: transparent;
+    color: %TEXT_MUTED%;
+    border: none;
+    border-top-left-radius: %R_CTRL%;
+    border-top-right-radius: %R_CTRL%;
+    padding: 0 10px;
+    margin: 6px 0 0 0;
+    min-width: %TAB_MIN_W%;
+    max-width: %TAB_MAX_W%;
+    min-height: %TAB_ROW%;
+}
+
+QTabBar#tabBar::tab:hover {
+    color: %TEXT_DIM%;
+    background: %HOVER%;
+}
+
+QTabBar#tabBar::tab:selected {
+    background: %ELEVATED%;
+    color: %TEXT%;
+    border-bottom: 2px solid %ACCENT%;
+}
+
+QTabBar#tabBar::close-button {
+    subcontrol-position: right;
+    background: transparent;
+    border: none;
+    border-radius: %R_CTRL%;
+    margin: 0 6px 0 4px;
+    padding: 1px;
+}
+
+QTabBar#tabBar::close-button:hover {
+    background: %ACTIVE%;
+}
+
+QTabBar#tabBar::close-button:pressed {
+    background: %DANGER%;
+}
+
+QToolButton#newTabButton {
+    background: transparent;
+    border: none;
+    border-radius: %R_CTRL%;
+    min-width: %CTRL_H%;
+    min-height: %CTRL_H%;
+    max-width: %CTRL_H%;
+    max-height: %CTRL_H%;
+    margin: 4px 4px 4px 4px;
+}
+
+QToolButton#newTabButton:hover {
+    background: %HOVER%;
+}
+
+QToolButton#newTabButton:pressed {
+    background: %ACTIVE%;
+}
+
+/* ---- navigation row ------------------------------------------------------ */
+
+QWidget#navRow {
+    background: transparent;
+    min-height: %NAV_ROW%;
+}
+
+/* All chrome action buttons: ghost until hovered. */
+QWidget#navRow QToolButton,
+QWidget#bookmarksRow QToolButton {
+    background: transparent;
+    color: %TEXT_DIM%;
+    border: none;
+    border-radius: %R_CTRL%;
+    padding: 0;
+    min-width: %CTRL_H%;
+    min-height: %CTRL_H%;
+    max-width: %CTRL_H%;
+    max-height: %CTRL_H%;
+}
+
+QWidget#navRow QToolButton:hover,
+QWidget#bookmarksRow QToolButton:hover {
+    background: %HOVER%;
+    color: %TEXT%;
+}
+
+QWidget#navRow QToolButton:pressed,
+QWidget#bookmarksRow QToolButton:pressed {
+    background: %ACTIVE%;
+}
+
+QWidget#navRow QToolButton:checked {
+    background: %ACCENT_DIM%;
+    color: %TEXT%;
+}
+
+QWidget#navRow QToolButton:disabled {
+    color: %TEXT_MUTED%;
+    background: transparent;
+}
+
+/* The address bar is the centerpiece: taller field, hairline resting
+   border (FIELD_LINE is deliberately softer than LINE — the old
+   LINE_STRONG resting border read as a bright frame around the field),
+   and the border only SPEAKS on focus. Hover alone stays quiet. */
+QLineEdit#addressField {
+    background: %SURFACE%;
+    border: 1px solid %FIELD_LINE%;
+    border-radius: %R_FIELD%;
+    padding: 0 12px;
+    min-height: %CTRL_H%;
+    max-height: %CTRL_H%;
+    min-width: 260px;
+    color: %TEXT%;
+    font-size: 10pt;
+    selection-background-color: %SEL_BG%;
+    selection-color: %SEL_FG%;
+}
+
+/* Focus — and only focus — sharpens the border to the accent. */
+QLineEdit#addressField:focus {
+    background: %SURFACE_LIGHTER%;
+    border: 1px solid %ACCENT%;
+}
+
+/* zoom indicator appears only when zoomed */
+QToolButton#zoomIndicator {
+    color: %TEXT_DIM%;
+    font-weight: 600;
+    padding: 0 8px;
+    min-width: %CTRL_H%;
+    min-height: %CTRL_H%;
+}
+
+QToolButton#zoomIndicator:hover {
+    background: %HOVER%;
+    color: %TEXT%;
+}
+
+/* private badge: outlined, quiet (not a solid violet pill) */
+QLabel#privateBadge {
+    background: transparent;
+    color: %ACCENT_TEXT%;
+    border: 1px solid %ACCENT_DIM%;
+    border-radius: 9px;
+    padding: 2px 10px;
+    font-weight: 600;
+    margin: 0 4px;
+}
+
+/* ---- bookmarks row ------------------------------------------------------ */
+
+QWidget#bookmarksRow {
+    background: transparent;
+    border-top: 1px solid %LINE%;
+    min-height: 32px;
+}
+
+QWidget#bookmarksRow QToolButton {
+    max-width: 180px;          /* long titles elide instead of stretching */
+    min-height: 28px;
+    max-height: 28px;
+    padding: 0 10px;
+    font-size: 9pt;
+}
+
+QWidget#bookmarksRow QToolButton::menu-indicator {
+    width: 0;                  /* no dropdown arrows on bookmark buttons */
+}
+
+/* ---- page-progress line --------------------------------------------------- */
+
+QProgressBar {
+    background: transparent;
+    border: none;
+    margin: 0 8px;
+}
+
+QProgressBar::chunk {
+    background: %ACCENT%;
+    border-radius: 1px;
+}
+
+/* ---- find bar --------------------------------------------------------------- */
+
+QWidget#findBar {
+    background: %ELEVATED%;
+    border-top: 1px solid %LINE%;
+}
+
+QWidget#findBar QLineEdit {
+    background: %SURFACE%;
+    border: 1px solid %FIELD_LINE%;
+    border-radius: %R_CTRL%;
+    padding: 4px 8px;
+    color: %TEXT%;
+    selection-background-color: %SEL_BG%;
+    selection-color: %SEL_FG%;
+}
+
+QWidget#findBar QLineEdit:focus {
+    border: 1px solid %ACCENT%;
+}
+
+QWidget#findBar QToolButton {
+    background: transparent;
+    color: %TEXT_DIM%;
+    border: none;
+    border-radius: %R_CTRL%;
+    padding: 4px 8px;
+    min-height: 26px;
+}
+
+QWidget#findBar QToolButton:hover {
+    background: %HOVER%;
+    color: %TEXT%;
+}
+
+QLabel#findCounter {
+    color: %TEXT_MUTED%;
+    padding: 0 4px;
+}
+
+/* ---- floating link preview (replaces the old status bar) -------------------
+   Hover-only, layout-free; never pushes page content. */
+
+QLabel#linkPreviewOverlay {
+    /* Dark chip in BOTH themes (like Firefox's hover chip): the text
+       stays light regardless of the active scheme. */
+    background: rgba(24, 25, 28, 235);
+    color: #c9cdd4;
+    border: 1px solid %LINE%;
+    border-radius: %R_CTRL%;
+    padding: 3px 10px;
+    font-size: 8.5pt;
+}
+
+/* ---- menus ------------------------------------------------------------------- */
+
+QMenu {
+    background: %ELEVATED%;
+    color: %TEXT%;
+    border: 1px solid %LINE%;
+    border-radius: %R_MENU%;
+    padding: 6px;
+}
+
+QMenu::item {
+    color: %TEXT_DIM%;
+    padding: 6px 24px 6px 14px;
+    border-radius: %R_CTRL%;
+}
+
+QMenu::item:selected {
+    background: %HOVER%;
+    color: %TEXT%;
+}
+
+QMenu::item:disabled {
+    color: %TEXT_MUTED%;
+}
+
+QMenu::separator {
+    height: 1px;
+    background: %LINE%;
+    margin: 5px 8px;
+}
+
+QMenu::indicator {
+    width: 14px;
+    height: 14px;
+    margin-left: 6px;
+}
+
+QMenu::indicator:non-exclusive:unchecked {
+    border: 1px solid %LINE_STRONG%;
+    border-radius: 4px;
+    background: %SURFACE%;
+}
+
+QMenu::indicator:non-exclusive:checked {
+    border: 1px solid %ACCENT%;
+    border-radius: 4px;
+    background: %ACCENT%;
+}
+
+QMenu::right-arrow {
+    width: 14px;
+    height: 14px;
+}
+
+/* ---- dialogs -------------------------------------------------------------- */
+
+QDialog, QMessageBox {
+    background: %ELEVATED%;
+    color: %TEXT%;
+}
+
+QDialog QTabWidget::pane, QMessageBox QTabWidget::pane {
+    border: 1px solid %LINE%;
+    border-radius: %R_CTRL%;
+    top: -1px;
+}
+
+/* settings tabs: quiet underline style (NOT browser tabs) */
+QDialog QTabBar {
+    background: transparent;
+    font-size: 9.5pt;
+}
+
+QDialog QTabBar::tab {
+    background: transparent;
+    color: %TEXT_MUTED%;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 7px 14px;
+    margin-right: 4px;
+}
+
+QDialog QTabBar::tab:hover {
+    color: %TEXT_DIM%;
+}
+
+QDialog QTabBar::tab:selected {
+    color: %TEXT%;
+    border-bottom: 2px solid %ACCENT%;
+}
+
+QPushButton {
+    background: %SURFACE%;
+    color: %TEXT%;
+    border: 1px solid %LINE%;
+    border-radius: %R_CTRL%;
+    padding: 6px 14px;
+    min-height: 24px;
+}
+
+QPushButton:hover {
+    border-color: %LINE_STRONG%;
+    background: %SURFACE_LIGHTER%;
+}
+
+QPushButton:pressed {
+    background: %ACTIVE%;
+}
+
+QPushButton:default, QPushButton:checked {
+    background: %ACCENT%;
+    border-color: %ACCENT%;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+QPushButton:default:hover, QPushButton:checked:hover {
+    background: %ACCENT_HOVER%;
+}
+
+QPushButton:disabled {
+    color: %TEXT_MUTED%;
+    border-color: %LINE%;
+    background: transparent;
+}
+
+QLineEdit, QComboBox, QSpinBox, QTextEdit, QPlainTextEdit {
+    background: %SURFACE%;
+    border: 1px solid %LINE%;
+    border-radius: %R_CTRL%;
+    padding: 5px 9px;
+    color: %TEXT%;
+    selection-background-color: %SEL_BG%;
+    selection-color: %SEL_FG%;
+}
+
+QLineEdit:hover, QComboBox:hover, QSpinBox:hover {
+    border-color: %LINE_STRONG%;
+}
+
+QLineEdit:focus, QComboBox:focus, QSpinBox:focus,
+QTextEdit:focus, QPlainTextEdit:focus {
+    border-color: %ACCENT%;
+}
+
+QLineEdit:disabled, QComboBox:disabled {
+    color: %TEXT_MUTED%;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 22px;
+}
+
+QComboBox QAbstractItemView {
+    background: %ELEVATED%;
+    border: 1px solid %LINE%;
+    selection-background-color: %HOVER%;
+    selection-color: %TEXT%;
+    border-radius: %R_CTRL%;
+    outline: none;
+    padding: 4px;
+}
+
+QComboBox QAbstractItemView::item {
+    border-radius: %R_CTRL%;
+    padding: 4px 6px;
+}
+
+QCheckBox, QRadioButton {
+    color: %TEXT_DIM%;
+    spacing: 8px;
+    padding: 3px 0;
+}
+
+QCheckBox:hover, QRadioButton:hover {
+    color: %TEXT%;
+}
+
+QCheckBox::indicator, QRadioButton::indicator {
+    width: 16px;
+    height: 16px;
+    border: 1px solid %LINE_STRONG%;
+    border-radius: 4px;
+    background: %SURFACE%;
+}
+
+QRadioButton::indicator {
+    border-radius: 8px;
+}
+
+QCheckBox::indicator:hover, QRadioButton::indicator:hover {
+    border-color: %ACCENT%;
+}
+
+QCheckBox::indicator:checked, QRadioButton::indicator:checked {
+    background: %ACCENT%;
+    border-color: %ACCENT%;
+}
+
+QGroupBox {
+    border: 1px solid %LINE%;
+    border-radius: %R_CTRL%;
+    margin-top: 12px;
+    padding: 10px 6px 6px 6px;
+    color: %TEXT_DIM%;
+    font-weight: 600;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 12px;
+    padding: 0 5px;
+    color: %TEXT_MUTED%;
+}
+
+QListWidget, QTableWidget, QTreeWidget {
+    background: %WINDOW%;
+    alternate-background-color: %SURFACE%;
+    border: 1px solid %LINE%;
+    border-radius: %R_CTRL%;
+    color: %TEXT%;
+    gridline-color: %LINE%;
+    selection-background-color: %SEL_BG%;
+    selection-color: %TEXT%;
+}
+
+QTableWidget QHeaderView::section, QTreeView QHeaderView::section {
+    background: %SURFACE%;
+    color: %TEXT_MUTED%;
+    border: none;
+    border-right: 1px solid %LINE%;
+    border-bottom: 1px solid %LINE%;
+    padding: 6px 8px;
+    font-weight: 600;
+}
+
+QTableWidget::item:selected, QTreeWidget::item:selected, QListWidget::item:selected {
+    background: %SEL_BG%;
+    color: %TEXT%;
+}
+
+/* ---- scrollbars: slim, quiet ------------------------------------------------ */
+
+QScrollBar:vertical {
+    background: transparent;
+    width: 9px;
+    margin: 2px;
+}
+
+QScrollBar::handle:vertical {
+    background: %LINE_STRONG%;
+    border-radius: 4px;
+    min-height: 28px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: %ACCENT_DIM%;
+}
+
+QScrollBar::add-line, QScrollBar::sub-line {
+    height: 0;
+    width: 0;
+}
+
+QScrollBar:horizontal {
+    background: transparent;
+    height: 9px;
+    margin: 2px;
+}
+
+QScrollBar::handle:horizontal {
+    background: %LINE_STRONG%;
+    border-radius: 4px;
+    min-width: 28px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background: %ACCENT_DIM%;
+}
+
+QScrollBar::add-page, QScrollBar::sub-page {
+    background: transparent;
+}
+
+/* ---- misc --------------------------------------------------------------------- */
+
+QLabel#noteLabel, QLabel#bookmarksEmpty, QLabel#hintLabel {
+    color: %TEXT_MUTED%;
+    font-style: italic;
+}
+
+QLabel#downloadPath {
+    color: %TEXT_MUTED%;
+    font-size: 8.5pt;
+}
+
+QWidget#crashOverlay {
+    background: %WINDOW%;
+}
+
+QWidget#crashOverlay QLabel {
+    color: %TEXT_DIM%;
+    font-size: 12pt;
+}
+
+QToolTip {
+    background: %ELEVATED%;
+    color: %TEXT%;
+    border: 1px solid %LINE_STRONG%;
+    border-radius: %R_CTRL%;
+    padding: 5px 8px;
+}
+
+QDialogButtonBox QPushButton {
+    min-width: 80px;
+}

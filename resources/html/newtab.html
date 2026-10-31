@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="{{LANG}}" dir="{{DIR}}">
+<head>
+<meta charset="utf-8">
+<title>{{TITLE}}</title>
+<style>
+  /* Palette injected by NewTabSchemeHandler from Theme::palette() — the
+     page and the browser chrome are one design system. */
+  {{PALETTE_CSS}}
+  :root {
+    /* Glass tokens. --glass-alpha is set at runtime from the user's
+       transparency preference; colors flip with the background scheme. */
+    --glass-alpha: 0.55;
+    --glass-blur: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* The canvas color lives on <html>; <body> stays transparent — a
+     backgrounded body would paint OVER its own negative-z-index children
+     (body creates no stacking context), which used to hide the wallpaper
+     entirely even though the <img> had loaded. */
+  html { background: var(--bg); }
+  body {
+    min-height: 100vh;
+    background: transparent;          /* the wallpaper shows through */
+    font-family: "Noto Sans", "Noto Sans Arabic", "Noto Sans SC", "Segoe UI", "DejaVu Sans", sans-serif;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ---- background layers -------------------------------------------------
+     The wallpaper is an ordinary <img> sized to cover, never stretched;
+     the veil is a FLAT translucent sheet (no gradient) that buys text
+     contrast on busy images; glass surfaces add their own real blur.
+     When backgrounds are disabled everything collapses to the theme's
+     own --bg color and the page is identical to the classic design. */
+  #bg {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -2;
+    display: none;            /* enabled at runtime */
+    background: var(--bg);
+  }
+  #veil {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    display: none;
+  }
+  body.bg-on #bg, body.bg-on #veil { display: block; }
+  body.bg-on.dark-bg  #veil { background: rgba(8, 9, 13, 0.28); }
+  body.bg-on.light-bg #veil { background: rgba(244, 244, 246, 0.34); }
+
+  /* Text scheme follows the artwork's luminance (decided in C++ on import
+     and shipped with every bundled background): AA contrast over both
+     dark cinematic and light minimal images, never "guess by glow".
+     theme-dark/theme-light (injected from Theme::isDark) covers the
+     no-background solid mode. */
+  body.bg-on {
+    --fg: rgba(238, 240, 244, 0.96);
+    --fg-dim: rgba(198, 202, 212, 0.86);
+    --fg-muted: rgba(168, 173, 184, 0.72);
+    --glass-line: rgba(255, 255, 255, 0.16);
+    --glass-line-strong: rgba(255, 255, 255, 0.28);
+  }
+  body.bg-on.light-bg {
+    --fg: rgba(26, 27, 32, 0.94);
+    --fg-dim: rgba(58, 61, 70, 0.86);
+    --fg-muted: rgba(84, 88, 98, 0.78);
+    --glass-line: rgba(0, 0, 0, 0.12);
+    --glass-line-strong: rgba(0, 0, 0, 0.2);
+  }
+  body:not(.bg-on) {
+    --fg: var(--text);
+    --fg-dim: var(--dim);
+    --fg-muted: var(--muted);
+    --glass-line: var(--line);
+    --glass-line-strong: var(--line-strong);
+  }
+  body.bg-on.dark-bg .hero-text { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.30); }
+
+  /* ---- content column -----------------------------------------------------
+     A grounded composition, not elements floating in a void — one tight
+     hero group (logo + greeting + glass search) with the Top-Sites grid
+     directly beneath, so the page reads complete with one site or with
+     twenty. */
+  .wrap {
+    width: min(700px, 94vw);
+    margin: 0 auto;
+    padding: clamp(44px, 11vh, 104px) 24px 56px 24px;
+  }
+  .logo {
+    width: 52px; height: 52px;
+    margin: 0 auto 12px auto;
+    border-radius: 14px;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 700; color: #fff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+  }
+  h1 {
+    font-size: 16.5px;
+    font-weight: 600;
+    margin-bottom: 22px;
+    color: var(--fg);
+    text-align: center;
+  }
+
+  /* ---- glass search bar -----------------------------------------------------
+     REAL glassmorphism, the Brave-quality way:
+       - a semi-transparent tint + backdrop blur on the CONTAINER;
+       - the input itself is fully transparent with FULL-OPACITY text —
+         no opacity() ever touches text or icons;
+       - dimensions are fixed: focusing or typing never resizes or shifts
+         the layout, and the suggestion/placeholder stays readable.
+     The tint alpha is user-controlled; with blur off (or unsupported) the
+     alpha is raised instead — readable on every background. */
+  form.search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 54px;                       /* fixed: no layout shift ever */
+    padding: 6px;
+    border-radius: 14px;
+    border: 1px solid var(--glass-line);
+    background: rgba(22, 24, 29, var(--glass-alpha));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.25);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.25);
+    direction: ltr; /* the query field keeps LTR even in Arabic layout */
+    transition: border-color .14s ease, box-shadow .14s ease;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  body.bg-on.light-bg form.search {
+    background: rgba(250, 250, 252, calc(var(--glass-alpha) * 0.92));
+    /* Soft lift: on light skies a glass sheet needs an edge shadow to
+       read as a surface (Brave does the same on bright wallpapers). */
+    box-shadow: 0 6px 24px rgba(40, 46, 60, 0.20);
+  }
+  /* Blur disabled or unsupported: trade blur for tint (still no text
+     opacity, still readable). */
+  body.no-blur form.search,
+  body:not(.bg-on) form.search {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: rgba(22, 24, 29, calc(var(--glass-alpha) + 0.30));
+  }
+  body.no-blur.bg-on.light-bg form.search,
+  body.no-blur.theme-light form.search,
+  body:not(.bg-on).theme-light form.search {
+    background: rgba(250, 250, 252, calc(var(--glass-alpha) + 0.30));
+  }
+  @supports not (backdrop-filter: blur(1px)) {
+    form.search {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      background: rgba(22, 24, 29, calc(var(--glass-alpha) + 0.30));
+    }
+    body.bg-on.light-bg form.search,
+    body.theme-light form.search {
+      background: rgba(250, 250, 252, calc(var(--glass-alpha) + 0.30));
+    }
+  }
+  form.search:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.28);
+  }
+  body.bg-on.light-bg form.search:focus-within {
+    box-shadow: 0 6px 24px rgba(40, 46, 60, 0.20), 0 0 0 3px rgba(139, 92, 246, 0.28);
+  }
+  form.search .q-glyph {
+    flex: 0 0 auto;
+    width: 20px; height: 20px;
+    margin: 0 2px 0 8px;
+    color: var(--fg-dim);
+  }
+  form.search input[type=text] {
+    flex: 1;
+    min-width: 0;
+    background: transparent;            /* the glass layer stays behind */
+    border: none;
+    outline: none;
+    color: var(--fg);
+    font-size: 15px;
+    padding: 10px 8px;
+    text-align: left;
+    height: 100%;
+  }
+  form.search input[type=text]::placeholder { color: var(--fg-muted); }
+  form.search button {
+    flex: 0 0 auto;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    height: 40px;
+    padding: 0 22px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color .14s ease;
+  }
+  form.search button:hover { background: var(--accent-hover); }
+  [dir="rtl"] form.search button { font-family: inherit; }
+
+  /* ---- Top Sites (glass tiles) -------------------------------------------- */
+  .section-title {
+    margin: 34px 2px 10px 2px;
+    color: var(--fg-muted);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    text-align: start;
+  }
+  .grid {
+    display: grid;
+    /* No-JS fallback; the script below replaces it with an explicit,
+    layout-balanced column count (Firefox-style: never a lone last tile
+    when the space allows). */
+    grid-template-columns: repeat(auto-fill, minmax(104px, 116px));
+    justify-content: center;
+    gap: 10px;
+  }
+  a.site {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 8px 12px 8px;
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--fg-dim);
+    border: 1px solid var(--glass-line);
+    background: rgba(22, 24, 29, calc(var(--glass-alpha) * 0.72));
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    transition: background-color .14s ease, border-color .14s ease;
+    outline: none;
+  }
+  body.bg-on.light-bg a.site {
+    background: rgba(250, 250, 252, calc(var(--glass-alpha) * 0.66));
+  }
+  body.no-blur a.site,
+  body:not(.bg-on) a.site {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: var(--hover);
+  }
+  body.no-blur a.site:hover,
+  body:not(.bg-on) a.site:hover { background: var(--active); }
+  a.site:hover, a.site:focus-visible {
+    border-color: var(--glass-line-strong);
+    color: var(--fg);
+  }
+  body.bg-on a.site:hover, body.bg-on a.site:focus-visible {
+    background: rgba(28, 30, 36, calc(var(--glass-alpha) + 0.14));
+  }
+  body.bg-on.light-bg a.site:hover,
+  body.bg-on.light-bg a.site:focus-visible {
+    background: rgba(252, 252, 253, calc(var(--glass-alpha) + 0.16));
+  }
+  a.site:focus-visible { box-shadow: 0 0 0 2px var(--accent) inset; }
+  .icon {
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .14s ease;
+  }
+  a.site:hover .icon { transform: scale(1.06); }
+  .icon img {
+    width: 32px; height: 32px;
+    object-fit: contain;
+    border-radius: 6px;
+    background: transparent;
+  }
+  /* Favicon fallback: ONE neutral glyph tile — deterministic and calm;
+    the PNG icons themselves are normalized to one optical size at
+    capture time (36px canvas, 30px content), so real icons and fallback
+    tiles align on the same baseline. */
+  .icon .letter {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(127, 131, 140, 0.22);
+    color: var(--fg-dim);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  /* Long site names: TWO quiet lines with an ellipsis — informative
+     instead of annoyingly clipped; the full name rides the tooltip. */
+  .label {
+    font-size: 12px;
+    line-height: 1.32;
+    max-width: 100%;
+    min-height: 2.64em;
+    text-align: center;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: break-word;
+  }
+  .pin-mark {
+    position: absolute;
+    top: 7px;
+    inset-inline-end: 9px;
+    width: 11px; height: 11px;
+    opacity: 0.6;
+    color: var(--fg-muted);
+  }
+  .empty-hint {
+    margin-top: 26px;
+    color: var(--fg-muted);
+    font-size: 12.5px;
+    text-align: center;
+  }
+  [dir="rtl"] .section-title { letter-spacing: 0; }
+
+  /* ---- context menu (glass) ------------------------------------------------ */
+  .ctx {
+    position: fixed;
+    z-index: 70;
+    min-width: 210px;
+    border-radius: 12px;
+    border: 1px solid var(--glass-line-strong);
+    background: rgba(28, 30, 36, 0.88);
+    -webkit-backdrop-filter: blur(18px) saturate(1.3);
+    backdrop-filter: blur(18px) saturate(1.3);
+    padding: 6px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.30);
+    display: none;
+    text-align: start;
+    color: var(--text);
+  }
+  body:not(.bg-on) .ctx { background: var(--elevated); }
+  .ctx button {
+    display: block;
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-radius: 7px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    padding: 8px 12px;
+    cursor: pointer;
+    text-align: start;
+    white-space: nowrap;
+  }
+  .ctx button:hover { background: var(--hover); color: var(--text); }
+  .ctx hr {
+    border: none;
+    border-top: 1px solid var(--glass-line);
+    margin: 4px 8px;
+  }
+
+  /* ---- edit dialog ----------------------------------------------------------- */
+  .scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    background: rgba(8, 8, 10, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .dialog {
+    width: min(340px, 90vw);
+    background: var(--elevated);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px;
+    text-align: start;
+    color: var(--text);
+  }
+  .dialog h2 { font-size: 15px; font-weight: 600; margin-bottom: 14px; color: var(--text); }
+  .dialog label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin: 10px 0 4px 0;
+  }
+  .dialog input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13.5px;
+    font-family: inherit;
+    padding: 8px 10px;
+    outline: none;
+    direction: ltr; /* URLs stay LTR */
+  }
+  .dialog input:focus { border-color: var(--accent); }
+  .dialog .error {
+    display: none;
+    color: var(--danger);
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  .dialog .row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .dialog .row button {
+    font-family: inherit;
+    font-size: 13px;
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--dim);
+  }
+  .dialog .row button:hover { border-color: var(--line-strong); color: var(--text); }
+  .dialog .row button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  .dialog .row button.primary:hover { background: var(--accent-hover); }
+
+  /* ---- customization ----------------------------------------------------------
+     A quiet glass FAB (inline-end bottom corner) opening a glass panel:
+     background gallery with live preview, shuffle, import, blur toggle,
+     search transparency slider, Top-Sites visibility, reset. Everything
+     persists through AppConfig (nor://newtab/action/... commands). */
+  #customizeFab {
+    position: fixed;
+    bottom: 22px;
+    inset-inline-end: 22px;
+    z-index: 60;
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--glass-line-strong);
+    background: rgba(24, 26, 31, 0.55);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    color: var(--fg-dim);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+    transition: background-color .14s ease, color .14s ease, transform .14s ease;
+  }
+  #customizeFab:hover {
+    background: rgba(30, 32, 38, 0.72);
+    color: var(--fg);
+    transform: translateY(-1px);
+  }
+  #customizeFab svg { width: 20px; height: 20px; }
+  body:not(.bg-on) #customizeFab {
+    background: var(--surface);
+    color: var(--dim);
+    box-shadow: none;
+  }
+  body:not(.bg-on) #customizeFab:hover { background: var(--hover); color: var(--text); }
+
+  #panel {
+    position: fixed;
+    bottom: 78px;
+    inset-inline-end: 22px;
+    z-index: 65;
+    width: min(372px, 92vw);
+    max-height: calc(100vh - 110px);
+    overflow-y: auto;
+    border-radius: 16px;
+    border: 1px solid var(--glass-line-strong);
+    background: rgba(26, 28, 33, 0.72);
+    -webkit-backdrop-filter: blur(22px) saturate(1.3);
+    backdrop-filter: blur(22px) saturate(1.3);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.32);
+    padding: 18px;
+    display: none;
+    color: var(--text);
+  }
+  body:not(.bg-on) #panel { background: var(--elevated); box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+  #panel.open { display: block; }
+  #panel h2 {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  #panel .sub {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+  #panel .section {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 16px 0 8px 0;
+  }
+  #panel .head-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  #panel .done-btn {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--dim);
+    border-radius: 7px;
+    font-size: 12px;
+    font-family: inherit;
+    padding: 5px 12px;
+    cursor: pointer;
+  }
+  #panel .done-btn:hover { border-color: var(--line-strong); color: var(--text); }
+
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .thumb {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+    padding: 0;
+    overflow: hidden;
+    transition: border-color .12s ease, transform .12s ease;
+  }
+  .thumb:hover { transform: translateY(-1px); }
+  .thumb.selected { border-color: var(--accent); }
+  .thumb.solid {
+    background: var(--bg);
+    border: 1px solid var(--glass-line);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted);
+    font-size: 16px;
+  }
+  .thumb.solid.selected { border: 2px solid var(--accent); }
+  .thumb span.name {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    background: rgba(10, 11, 15, 0.78);
+    color: rgba(255, 255, 255, 0.94);
+    font-size: 10.5px;
+    line-height: 1;
+    padding: 4px 2px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .panel-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .panel-actions button {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--dim);
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-family: inherit;
+    padding: 8px 6px;
+    cursor: pointer;
+  }
+  .panel-actions button:hover { border-color: var(--line-strong); color: var(--text); }
+  .panel-actions button svg { width: 14px; height: 14px; }
+
+  /* switches (compact, standard control idiom) */
+  .switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 0;
+    color: var(--dim);
+    font-size: 13px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .switch-row:hover { color: var(--text); }
+  .switch {
+    position: relative;
+    width: 38px; height: 21px;
+    flex: 0 0 auto;
+  }
+  .switch input {
+    opacity: 0;
+    width: 100%; height: 100%;
+    margin: 0;
+    cursor: pointer;
+    position: absolute;
+    z-index: 2;
+  }
+  .switch .track {
+    position: absolute;
+    inset: 0;
+    border-radius: 11px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    transition: background-color .14s ease, border-color .14s ease;
+  }
+  .switch .knob {
+    position: absolute;
+    top: 2px;
+    inset-inline-start: 2px;
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: transform .14s ease, background-color .14s ease;
+  }
+  .switch input:checked ~ .track {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .switch input:checked ~ .knob {
+    transform: translateX(17px);
+    background: #fff;
+  }
+  [dir="rtl"] .switch input:checked ~ .knob { transform: translateX(-17px); }
+
+  .opacity-row {
+    padding: 6px 0 2px 0;
+  }
+  .opacity-row .lbl {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--dim);
+    margin-bottom: 8px;
+  }
+  .opacity-row .lbl b { font-weight: 600; color: var(--text); }
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 20px;
+    background: transparent;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line-strong);
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-top: -6px;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  }
+  .reset-row {
+    margin-top: 14px;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .reset-row button {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: inherit;
+    padding: 7px 12px;
+    cursor: pointer;
+  }
+  .reset-row button:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* import failure toast */
+  #toast {
+    position: fixed;
+    bottom: 132px;
+    inset-inline-end: 22px;
+    z-index: 90;
+    background: rgba(40, 22, 26, 0.9);
+    border: 1px solid rgba(224, 108, 117, 0.5);
+    color: #f2c6ca;
+    font-size: 12.5px;
+    border-radius: 10px;
+    padding: 9px 14px;
+    display: none;
+  }
+</style>
+</head>
+<body class="{{THEME_CLASS}}">
+  <img id="bg" alt="" src="">
+  <div id="veil"></div>
+
+  <div class="wrap">
+    <div class="logo">&#216;</div>
+    <h1 class="hero-text">{{GREETING}}</h1>
+    <form class="search" onsubmit="return go()">
+      <svg class="q-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="q" type="text" placeholder="{{SEARCH_PLACEHOLDER}}" autofocus autocomplete="off">
+      <button type="submit">{{SEARCH_BUTTON}}</button>
+    </form>
+    <div id="topsites"></div>
+  </div>
+
+  <button id="customizeFab" title="{{CUSTOMIZE_TITLE}}" aria-label="{{CUSTOMIZE_TITLE}}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
+    </svg>
+  </button>
+
+  <div id="panel" role="dialog" aria-label="{{CUSTOMIZE_TITLE}}">
+    <div class="head-row">
+      <h2>{{CUSTOMIZE_TITLE}}</h2>
+      <button type="button" class="done-btn" id="panelDone">{{CUSTOMIZE_DONE}}</button>
+    </div>
+    <div class="sub" id="panelHint">&nbsp;</div>
+    <div class="section">{{CUSTOMIZE_BG_SECTION}}</div>
+    <div class="gallery" id="gallery"></div>
+    <div class="panel-actions">
+      <button type="button" id="btnShuffle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.8-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/></svg>
+        {{CUSTOMIZE_RANDOM}}
+      </button>
+      <button type="button" id="btnImport">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+        {{CUSTOMIZE_IMPORT}}
+      </button>
+    </div>
+    <div class="section">{{CUSTOMIZE_OPACITY}}</div>
+    <div class="opacity-row">
+      <div class="lbl"><span>{{CUSTOMIZE_OPACITY}}</span><b id="opacityVal">55%</b></div>
+      <input type="range" id="opacity" min="30" max="90" step="5" value="55">
+    </div>
+    <div class="section">{{CUSTOMIZE_BLUR}}</div>
+    <label class="switch-row">
+      <span>{{CUSTOMIZE_BLUR}}</span>
+      <span class="switch">
+        <input type="checkbox" id="chkBlur" checked>
+        <span class="track"></span><span class="knob"></span>
+      </span>
+    </label>
+    <label class="switch-row">
+      <span>{{CUSTOMIZE_SHOW_SITES}}</span>
+      <span class="switch">
+        <input type="checkbox" id="chkSites" checked>
+        <span class="track"></span><span class="knob"></span>
+      </span>
+    </label>
+    <div class="reset-row">
+      <button type="button" id="btnReset">{{CUSTOMIZE_RESET}}</button>
+    </div>
+  </div>
+
+  <div class="ctx" id="ctx"></div>
+  <div id="toast">{{IMPORT_UNSUPPORTED}}</div>
+
+  <div class="scrim" id="scrim">
+    <div class="dialog" role="dialog" aria-modal="true">
+      <h2 id="dlg-title">{{EDIT_DIALOG_TITLE}}</h2>
+      <label for="dlg-name">{{EDIT_LABEL_TITLE}}</label>
+      <input id="dlg-name" type="text">
+      <label for="dlg-url">{{EDIT_LABEL_URL}}</label>
+      <input id="dlg-url" type="text" spellcheck="false">
+      <div class="error" id="dlg-error">{{EDIT_INVALID_URL}}</div>
+      <div class="row">
+        <button type="button" id="dlg-cancel">{{EDIT_CANCEL}}</button>
+        <button type="button" class="primary" id="dlg-save">{{EDIT_SAVE}}</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var ENGINE = {{ENGINE_JSON}};
+    var SITES = {{TOPSITES_JSON}};
+    var READONLY = {{READONLY}} === 1;
+    var P = {{NEWTAB_JSON}};
+
+    var L = {
+      topSites: "{{TOPSITES_TITLE}}",
+      emptyHint: "{{EMPTY_HINT}}",
+      openNewTab: "{{MENU_OPEN_NEWTAB}}",
+      openNewWindow: "{{MENU_OPEN_NEWWINDOW}}",
+      pin: "{{MENU_PIN}}",
+      unpin: "{{MENU_UNPIN}}",
+      edit: "{{MENU_EDIT}}",
+      remove: "{{MENU_REMOVE}}",
+      solid: "{{CUSTOMIZE_NONE}}"
+    };
+
+    function go() {
+      var q = document.getElementById("q").value.trim();
+      if (!q) return false;
+      var url = ENGINE.url.replace("%s", encodeURIComponent(q));
+      window.location.href = url;
+      return false;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+
+    function send(action, params) {
+      // Commands are nor:// URLs blocked in C++ (WebPage::acceptNavigation
+      // Request) and executed natively; a reload follows when needed.
+      var u = "nor://newtab/action/" + action;
+      if (params) {
+        var parts = [];
+        for (var k in params) {
+          if (params[k] !== undefined && params[k] !== null)
+            parts.push(k + "=" + encodeURIComponent(params[k]));
+        }
+        if (parts.length) u += "?" + parts.join("&");
+      }
+      window.location.href = u;
+    }
+
+    /* ------------------------------------------------ background + glass -- */
+
+    function setBackgroundLive(id, dark) {
+      var body = document.body;
+      body.classList.remove("bg-on", "dark-bg", "light-bg");
+      if (!id) {
+        document.getElementById("bg").removeAttribute("src");
+        return; // solid mode: theme-* class + var(--bg) carry the scheme
+      }
+      document.getElementById("bg").src = "nor://background/" + id;
+      body.classList.add("bg-on");
+      body.classList.add(dark ? "dark-bg" : "light-bg");
+    }
+
+    function applyBlurLive(on) {
+      document.body.classList.toggle("no-blur", !on);
+    }
+
+    function applyOpacityLive(alpha) {
+      var v = Math.max(0.3, Math.min(0.9, alpha));
+      document.documentElement.style.setProperty("--glass-alpha", v.toFixed(3));
+    }
+
+    function applyTopSitesLive(show) {
+      document.getElementById("topsites").style.display = show ? "" : "none";
+    }
+
+    function applyAllPrefs() {
+      // bgUrl arrives as the full "nor://background/<id>" URL — extract
+      // the id (never re-prepend the prefix).
+      setBackgroundLive(P.bgEnabled && P.bgUrl ? P.bgUrl.split("/").pop() : null,
+                        P.bgDark);
+      applyBlurLive(P.blur);
+      applyOpacityLive(P.searchAlpha);
+      applyTopSitesLive(P.showTopSites);
+      document.getElementById("opacity").value = Math.round(P.searchAlpha * 100);
+      document.getElementById("opacityVal").textContent =
+        Math.round(P.searchAlpha * 100) + "%";
+      document.getElementById("chkBlur").checked = P.blur;
+      document.getElementById("chkSites").checked = P.showTopSites;
+      markSelectedThumb();
+    }
+
+    // Called from C++ (WebPage) after ANY customization command — even
+    // ones invoked outside the panel UI — so the visible page and the
+    // persisted state can never disagree.
+    function norApplyPrefs(p) {
+      if (!p) return;
+      for (var k in p) {
+        if (Object.prototype.hasOwnProperty.call(p, k)) P[k] = p[k];
+      }
+      applyAllPrefs();
+    }
+    window.norApplyPrefs = norApplyPrefs;
+
+    /* -------------------------------------------------- customization UI -- */
+
+    function renderGallery() {
+      var g = document.getElementById("gallery");
+      while (g.firstChild) g.removeChild(g.firstChild);
+
+      var solid = document.createElement("button");
+      solid.type = "button";
+      solid.className = "thumb solid";
+      solid.title = L.solid;
+      solid.appendChild(document.createTextNode("\u25CB"));
+      solid.addEventListener("click", function () {
+        P.bgEnabled = false;
+        setBackgroundLive(null, false);
+        markSelectedThumb();
+        send("bg-set", { id: "" });
+      });
+      g.appendChild(solid);
+
+      (P.gallery || []).forEach(function (e) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "thumb";
+        b.dataset.id = e.id;
+        b.title = e.name;
+        b.style.backgroundImage = "url('" + e.thumb + "')";
+        var name = document.createElement("span");
+        name.className = "name";
+        name.textContent = e.name;
+        b.appendChild(name);
+        b.addEventListener("click", function () {
+          P.bgEnabled = true;
+          P.bgUrl = "nor://background/" + e.id;
+          P.bgDark = e.dark;
+          setBackgroundLive(e.id, e.dark);
+          markSelectedThumb();
+          send("bg-set", { id: e.id });
+        });
+        g.appendChild(b);
+      });
+    }
+
+    function markSelectedThumb() {
+      var active = P.bgEnabled ? P.bgUrl.split("/").pop() : null;
+      var thumbs = document.querySelectorAll("#gallery .thumb");
+      for (var i = 0; i < thumbs.length; ++i) {
+        var t = thumbs[i];
+        var isSolid = !t.dataset.id;
+        t.classList.toggle("selected",
+                           active ? t.dataset.id === active : isSolid);
+      }
+    }
+
+    document.getElementById("customizeFab").addEventListener("click", function () {
+      var p = document.getElementById("panel");
+      p.classList.toggle("open");
+    });
+    document.getElementById("panelDone").addEventListener("click", function () {
+      document.getElementById("panel").classList.remove("open");
+    });
+    document.addEventListener("click", function (ev) {
+      var p = document.getElementById("panel");
+      if (!p.classList.contains("open")) return;
+      if (p.contains(ev.target)) return;
+      if (document.getElementById("customizeFab").contains(ev.target)) return;
+      p.classList.remove("open");
+    });
+
+    document.getElementById("btnShuffle").addEventListener("click", function () {
+      send("bg-random"); // C++ picks and reloads with the new artwork
+    });
+    document.getElementById("btnImport").addEventListener("click", function () {
+      send("bg-import"); // C++ opens the file dialog, then reloads
+    });
+    document.getElementById("btnReset").addEventListener("click", function () {
+      send("newtab-reset");
+    });
+
+    document.getElementById("chkBlur").addEventListener("change", function () {
+      P.blur = this.checked;
+      applyBlurLive(P.blur);
+      send("newtab-pref", { blur: P.blur ? "1" : "0" });
+    });
+    document.getElementById("chkSites").addEventListener("change", function () {
+      P.showTopSites = this.checked;
+      applyTopSitesLive(P.showTopSites);
+      send("newtab-pref", { topsites: P.showTopSites ? "1" : "0" });
+    });
+
+    var opacityTimer = null;
+    document.getElementById("opacity").addEventListener("input", function () {
+      // Live preview while dragging; persistence on release (change).
+      var v = parseInt(this.value, 10) / 100;
+      applyOpacityLive(v);
+      document.getElementById("opacityVal").textContent =
+        parseInt(this.value, 10) + "%";
+    });
+    document.getElementById("opacity").addEventListener("change", function () {
+      clearTimeout(opacityTimer);
+      var v = parseInt(this.value, 10);
+      opacityTimer = setTimeout(function () {
+        send("newtab-pref", { opacity: String(v) });
+      }, 150);
+    });
+
+    // Called from C++ when a background import failed (WebPage).
+    function norImportFailed() {
+      var t = document.getElementById("toast");
+      t.style.display = "block";
+      setTimeout(function () { t.style.display = "none"; }, 3200);
+    }
+    window.norImportFailed = norImportFailed;
+
+    /* ------------------------------------------------------- Top Sites ---- */
+
+    function render() {
+      var host = document.getElementById("topsites");
+      if (!SITES.length) {
+        var hint = document.createElement("div");
+        hint.className = "empty-hint";
+        hint.textContent = L.emptyHint;
+        host.appendChild(hint);
+        return;
+      }
+      var title = document.createElement("div");
+      title.className = "section-title";
+      title.textContent = L.topSites;
+      host.appendChild(title);
+
+      var grid = document.createElement("div");
+      grid.className = "grid";
+      for (var i = 0; i < SITES.length; ++i) {
+        var s = SITES[i];
+        var a = document.createElement("a");
+        a.className = "site";
+        a.href = s.url;
+        a.dataset.url = s.url;
+        a.dataset.title = s.title;
+        a.dataset.pinned = s.pinned ? "1" : "0";
+        a.title = s.title;   // full name on hover, never annoyingly cut
+
+        var icon = document.createElement("span");
+        icon.className = "icon";
+        var letter = document.createElement("span");
+        letter.className = "letter";       // one neutral fallback style
+        letter.textContent = (s.host.charAt(0) || "?").toUpperCase();
+        if (s.favicon) {
+          var img = document.createElement("img");
+          img.src = s.favicon;
+          img.alt = "";
+          img.loading = "lazy";
+          // Real favicon when it loads; neutral letter tile otherwise.
+          img.addEventListener("error", function () {
+            var fb = this.nextElementSibling;
+            if (fb) fb.style.display = "";
+            this.remove();
+          });
+          icon.appendChild(img);
+          letter.style.display = "none";
+          icon.appendChild(letter);
+        } else {
+          icon.appendChild(letter);
+        }
+        a.appendChild(icon);
+
+        if (s.pinned) {
+          var pin = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          pin.setAttribute("viewBox", "0 0 16 16");
+          pin.setAttribute("class", "pin-mark");
+          pin.innerHTML = '<path fill="currentColor" d="M9.5 1 15 6.5l-1.4 1.4-.8-.8-1.6 3.7.1 2.4-2.7-2.7-3.9 3.9-1-1 3.9-3.9L4.9 6.8l2.4.1 3.7-1.6-.8-.8L9.5 1z"/>';
+          a.appendChild(pin);
+        }
+
+        var label = document.createElement("span");
+        label.className = "label";
+        label.textContent = s.title;
+        a.appendChild(label);
+
+        a.addEventListener("contextmenu", function (ev) {
+          ev.preventDefault();
+          openMenu(ev.clientX, ev.clientY, this);
+        });
+        grid.appendChild(a);
+      }
+      host.appendChild(grid);
+    }
+
+    var menuSite = null;
+    function openMenu(x, y, tile) {
+      menuSite = tile;
+      var m = document.getElementById("ctx");
+      while (m.firstChild) m.removeChild(m.firstChild);
+      function item(label, fn) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.textContent = label;
+        b.addEventListener("click", fn);
+        m.appendChild(b);
+      }
+      item(L.openNewTab, function () { closeMenu(); send("open-tab", { url: menuSite.dataset.url }); });
+      item(L.openNewWindow, function () { closeMenu(); send("open-window", { url: menuSite.dataset.url }); });
+      if (!READONLY) {
+        m.appendChild(document.createElement("hr"));
+        if (menuSite.dataset.pinned === "1")
+          item(L.unpin, function () { closeMenu(); send("unpin", { url: menuSite.dataset.url, title: menuSite.dataset.title }); });
+        else
+          item(L.pin, function () { closeMenu(); send("pin", { url: menuSite.dataset.url, title: menuSite.dataset.title }); });
+        item(L.edit, function () { closeMenu(); openDialog(menuSite); });
+        item(L.remove, function () { closeMenu(); send("remove", { url: menuSite.dataset.url }); });
+      }
+      m.style.display = "block";
+      var r = m.getBoundingClientRect();
+      var px = Math.min(x, window.innerWidth - r.width - 6);
+      var py = Math.min(y, window.innerHeight - r.height - 6);
+      m.style.left = Math.max(4, px) + "px";
+      m.style.top = Math.max(4, py) + "px";
+    }
+    function closeMenu() {
+      var m = document.getElementById("ctx");
+      m.style.display = "none";
+      menuSite = null;
+    }
+    document.addEventListener("click", function (ev) {
+      var m = document.getElementById("ctx");
+      if (m.style.display === "block" && !m.contains(ev.target)) closeMenu();
+    });
+    document.addEventListener("keydown", function (ev) {
+      if (ev.key === "Escape") { closeMenu(); closeDialog(); closePanelOnEsc(); }
+    });
+    function closePanelOnEsc() {
+      document.getElementById("panel").classList.remove("open");
+    }
+    window.addEventListener("blur", closeMenu);
+    window.addEventListener("resize", closeMenu);
+
+    /* ---- edit dialog ---- */
+    var editSite = null;
+    function openDialog(tile) {
+      editSite = tile;
+      document.getElementById("dlg-name").value = tile.dataset.title || "";
+      document.getElementById("dlg-url").value = tile.dataset.url || "";
+      document.getElementById("dlg-error").style.display = "none";
+      document.getElementById("scrim").style.display = "flex";
+      document.getElementById("dlg-name").focus();
+    }
+    function closeDialog() {
+      document.getElementById("scrim").style.display = "none";
+      editSite = null;
+    }
+    document.getElementById("dlg-cancel").addEventListener("click", closeDialog);
+    document.getElementById("scrim").addEventListener("click", function (ev) {
+      if (ev.target === this) closeDialog();
+    });
+    document.getElementById("dlg-save").addEventListener("click", function () {
+      if (!editSite) return closeDialog();
+      var name = document.getElementById("dlg-name").value.trim();
+      var url = document.getElementById("dlg-url").value.trim();
+      var err = document.getElementById("dlg-error");
+      if (!/^https?:\/\/[^\s]+$/i.test(url)) {
+        err.style.display = "block";
+        return;
+      }
+      send("edit", { url: editSite.dataset.url, title: name, newurl: url });
+      closeDialog();
+    });
+    document.getElementById("dlg-url").addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter") document.getElementById("dlg-save").click();
+    });
+
+    function layoutGrid() {
+      var grid = document.querySelector('.grid');
+      if (!grid || !SITES.length) return;
+      var n = SITES.length;
+      var avail = (grid.parentElement && grid.parentElement.clientWidth) || 612;
+      var gap = 10, minTile = 104, tile = 112;
+      // Columns that physically fit at the current width.
+      var fits = Math.max(1, Math.floor((avail + gap) / (minTile + gap)));
+      // Up to 6 sites: one balanced row. More: fill rows of at most 6 so
+      // the last row is never a lone tile (7 -> 4+3, 9 -> 5+4, 12 -> 6+6).
+      var cols = n <= 6 ? n : Math.ceil(n / Math.ceil(n / 6));
+      cols = Math.max(1, Math.min(cols, fits, 6));
+      grid.style.gridTemplateColumns =
+        'repeat(' + cols + ', minmax(0, ' + tile + 'px))';
+    }
+    window.addEventListener('resize', layoutGrid);
+
+    render();
+    renderGallery();
+    applyAllPrefs();
+    layoutGrid();
+  </script>
+</body>
+</html>

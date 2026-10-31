@@ -1,0 +1,123 @@
+! NØR Browser — built-in starter blocklist
+! ---------------------------------------------------------------
+! A curated, conservative list of well-known advertising and
+! tracking domains. It is intentionally small: it blocks the loudest
+! trackers without breaking everyday websites.
+!
+! Syntax: Adblock-style subset (see docs/FILTER_RULES.md):
+!   ||domain.tld^      block any subdomain of domain.tld
+!   @@||domain.tld^    exception (never block)
+!   $third-party       restrict to third-party requests
+!   $image, $script, $stylesheet, $xmlhttprequest, ...
+!
+! You can disable or extend this list in Settings -> Privacy.
+! ---------------------------------------------------------------
+
+! --- Major ad networks ---
+||doubleclick.net^
+||googlesyndication.com^
+||googleadservices.com^
+||adservice.google.com^
+||adsystem.com^
+||amazon-adsystem.com^
+||adnxs.com^
+||adsrvr.org^
+||criteo.com^
+||criteo.net^
+||taboola.com^
+||outbrain.com^
+||outbrainimg.com^
+||rubiconproject.com^
+||pubmatic.com^
+||openx.net^
+||openx.net^$third-party
+||smartadserver.com^
+||adform.net^
+||casalemedia.com^
+||indexww.com^
+||bidswitch.net^
+||yieldmo.com^
+||sharethrough.com^
+||sonobi.com^
+||gumgum.com^
+||media.net^
+||33across.com^
+||lijit.com^
+||sovrn.com^
+
+! --- Analytics and tracking ---
+||google-analytics.com^
+||googletagmanager.com^
+||analytics.tiktok.com^
+||ads-twitter.com^
+||static.ads-twitter.com^
+||bat.bing.com^
+||clarity.ms^
+||quantserve.com^
+||scorecardresearch.com^
+||chartbeat.com^
+||chartbeat.net^
+||mixpanel.com^$third-party
+||hotjar.com^$third-party
+||fullstory.com^$third-party
+||amplitude.com^$third-party
+||segment.io^$third-party
+||branch.io^$third-party
+||appsflyer.com^$third-party
+||matomo.cloud^$third-party
+||stats.wp.com^
+||mc.yandex.ru^
+||top100.ru^
+
+! --- Fingerprinting / session replay ---
+||bluekai.com^
+||krxd.net^
+||demdex.net^
+||everesttech.net^
+||omtrdc.net^
+||2o7.net^
+||adobedtm.com^$third-party
+||evidon.com^
+||ghostery.com^$third-party
+||moatads.com^
+||moatpixel.com^
+||adsafeprotected.com^
+||doubleverify.com^
+||sizmek.com^
+
+! --- Common pop/redirect ad hosts ---
+||popads.net^
+||popcash.net^
+||propellerads.com^
+||adcash.com^
+||zeropark.com^
+||adsterra.com^
+||exoclick.com^
+||juicyads.com^
+||trafficjunky.net^
+
+! --- Aggressive banner patterns (URL path based) ---
+||*/ads/ad-
+||*/pagead/imgad?
+||*/banner468.
+||*/banner728.
+
+! --- Social widgets (third-party only, so sites keep working) ---
+||facebook.net^$third-party
+||connect.facebook.net^$third-party
+||platform.twitter.com^$third-party
+||apis.google.com^$third-party,script
+
+! --- Exceptions: domains that must never be blocked ---
+! (CDNs and login endpoints that shared rules sometimes catch)
+@@||accounts.google.com^
+@@||apis.google.com^$document
+@@||gstatic.com^
+@@||googleapis.com^$script
+@@||google.com^$document
+@@||cloudflare.com^
+@@||jsdelivr.net^
+@@||cdnjs.cloudflare.com^
+@@||unpkg.com^
+@@||wikipedia.org^
+@@||wikimedia.org^
