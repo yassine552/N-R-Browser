@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 The NØR Browser authors
 // Unit tests for AddressBarSuggestions: local autocomplete from history
 // and bookmarks, Arabic/French text support, disabling, de-duplication,
 // and private-mode exclusion (private visits never reach the stores, so

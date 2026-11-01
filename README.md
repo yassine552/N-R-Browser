@@ -322,7 +322,31 @@ nor-browser/
 
 ## 7. License
 
-NØR Browser source code is released under the MIT license (see
-`LICENSE`). Qt and Qt WebEngine are subject to the LGPL/GPL/commercial
-licensing of The Qt Company Ltd; Chromium components carry their own
-BSD-style licenses. See `docs/DEPENDENCIES.md`.
+NØR Browser is **free software: you can use, study, share and modify it**
+under the terms of the **GNU General Public License v3 or later**
+(**GPL-3.0-or-later**) — see `LICENSE` for the full license text.
+
+Every project source file (C++, Python, shell, QSS, HTML, CMake — plus
+the starter blocklist, which carries an inline SPDX notice) carries an
+`SPDX-License-Identifier: GPL-3.0-or-later` header, with two deliberate
+exceptions: the `adblock-sys` C-ABI shim files (`adblock-sys/src/lib.rs`,
+`adblock-sys/include/nor_adblock.h`) are **MPL-2.0** — original code kept
+under the same license as the MPL-2.0 `adblock-rust` engine they wrap —
+and they are compiled into and distributed with this larger
+GPL-3.0-or-later work under **MPL-2.0 §3.3 ("Distribution of a Larger
+Work")**, remaining under MPL-2.0 with their notices preserved and their
+source shipped in this archive. (No secondary GPL license is claimed:
+GPL-3.0 is not one of the Secondary Licenses defined by MPL-2.0 §1.12.)
+Generated and translated assets (SVG icons, app icons, `.ts`
+translations) and the documentation are covered by the project license
+without per-file headers; the bundled new-tab backgrounds are dedicated
+to the public domain (CC0 1.0) and the bundled Noto fonts are OFL-1.1.
+
+Qt modules are not bundled in this archive and remain under the
+licensing of The Qt Company Ltd — LGPL-3.0-only / GPL-3.0-only /
+GPL-2.0-only / commercial for the QtBase modules used here, and
+LGPL-3.0 / GPL-3.0 / GPL-2.0 / commercial for the Qt-specific parts of
+Qt WebEngine; the Chromium portion embedded in Qt WebEngine carries its
+own separate BSD-style third-party licenses. See
+`THIRD_PARTY_NOTICES.md` and `docs/DEPENDENCIES.md` for the full
+per-component breakdown.

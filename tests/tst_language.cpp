@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 The NØR Browser authors
 // Unit tests for localization: translator loading, language switching,
 // RTL direction, and persistence of the language preference.
 #include <QtTest>

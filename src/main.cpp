@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 The NØR Browser authors
 #include "BrowserApplication.h"
 #include "LanguageManager.h"
 #include "NewTabSchemeHandler.h"
@@ -114,6 +116,9 @@ int main(int argc, char *argv[])
     QCommandLineOption smokeNewTabOption(QStringList{ QStringLiteral("smoke-newtab") },
                                          QStringLiteral("New Tab experience matrix at 1366x768: backgrounds (dark/light/busy/custom), blur on/off, search focus stability, customization panel, solid color, reset, AR/FR, and title-sync consistency. Saves screenshots into <dir>."),
                                          QStringLiteral("dir"));
+    QCommandLineOption smokeShowcaseOption(QStringList{ QStringLiteral("smoke-showcase") },
+                                           QStringLiteral("Polish showcase matrix at 1366x768 with SEEDED history + favicons: every bundled background family with real Top-Sites tiles, no-duplicate guarantee, offline search suggestions open over glass, customize panel, solid mode and AR/FR. Saves screenshots into <dir>."),
+                                           QStringLiteral("dir"));
     QCommandLineOption screenshotOption(QStringList{ QStringLiteral("screenshot") },
                                         QStringLiteral("Save a window screenshot (used with --smoke)."),
                                         QStringLiteral("path"));
@@ -121,7 +126,8 @@ int main(int argc, char *argv[])
                         smokeLanguageOption, smokeDownloadOption, smokeCosmeticOption,
                         smokeTlsBadOption, smokeBlockingOption, smokeEasyListOption,
                         smokeEasyPrivacyOption, smokePrivacyOption, smokeTopSitesOption,
-                        smokeChromeOption, smokeNewTabOption, screenshotOption });
+                        smokeChromeOption, smokeNewTabOption, smokeShowcaseOption,
+                        screenshotOption });
     parser.process(app);
 
     Theme::apply();
@@ -198,6 +204,11 @@ int main(int argc, char *argv[])
     }
     if (parser.isSet(smokeNewTabOption)) {
         const int rc = nor->runSmokeNewTab(parser.value(smokeNewTabOption));
+        delete nor;
+        return rc;
+    }
+    if (parser.isSet(smokeShowcaseOption)) {
+        const int rc = nor->runSmokeShowcase(parser.value(smokeShowcaseOption));
         delete nor;
         return rc;
     }

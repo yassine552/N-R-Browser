@@ -25,3 +25,32 @@ checkpoints/*.zip
 /user-data/
 /profiles/
 /browser-data/
+
+# Build artifacts
+/build/
+/build-*/
+/cmake-build-*/
+**/build/
+**/target/
+/CMakeFiles/
+/CMakeCache.txt
+
+# Local evidence and screenshots
+/evidence/
+/screenshots/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Local browser data
+/user-data/
+/profiles/
+/browser-data/
+
+# Temporary files
+*.log
+*.swp
+*~
+.DS_Store

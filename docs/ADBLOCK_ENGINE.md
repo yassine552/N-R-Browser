@@ -12,7 +12,7 @@ Candidates evaluated for network-request + cosmetic filtering:
 | **brave/adblock-rust 0.13.5** | Rust | MPL-2.0 | **Selected.** Full EasyList/EasyPrivacy grammar, cosmetic filtering, engine serialization, embedded Public Suffix List, actively maintained, pinned exactly via crates.io. |
 | adblockplus/libadblockplus | C++ (requires full V8) | GPL-3.0 | Rejected: linking a second, complete V8 alongside Qt WebEngine's own is far too heavy for the 8 GB target (build, RAM and maintenance). |
 | uBlock Origin | JavaScript (WebExtension) | GPL-3.0 | Not applicable: Qt WebEngine has no extension host; it is not a library. |
-| NØR built-in C++ engine | C++ | MIT | Kept as the zero-dependency fallback build path and as the reference semantics for the documented Adblock subset (`docs/FILTER_RULES.md`). |
+| NØR built-in C++ engine | C++ | GPL-3.0-or-later (this project) | Kept as the zero-dependency fallback build path and as the reference semantics for the documented Adblock subset (`docs/FILTER_RULES.md`). |
 
 Deciding measurements (real runs, this repository's test suite):
 

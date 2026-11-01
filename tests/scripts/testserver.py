@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 The NØR Browser authors
 """Deterministic local test server for NØR Browser smoke tests.
 
 Serves simple pages with predictable titles and a redirect. The browser's

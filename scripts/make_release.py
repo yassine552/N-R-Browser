@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 The NØR Browser authors
 # -*- coding: utf-8 -*-
 """Creates the NØR Browser source archive (release/NOR-Browser-source.zip).
 
@@ -78,6 +80,9 @@ def main() -> None:
             "nor-browser/adblock-sys/src/lib.rs",
             "nor-browser/adblock-sys/include/nor_adblock.h",
             "nor-browser/THIRD_PARTY_NOTICES.md",
+            "nor-browser/docs/DEPENDENCIES.md",
+            "nor-browser/resources/fonts/OFL.txt",
+            "nor-browser/resources/backgrounds/README.md",
             "nor-browser/translations/nor-browser_ar.ts",
             "nor-browser/translations/nor-browser_fr.ts",
             "nor-browser/resources/filters/starter-blocklist.txt",

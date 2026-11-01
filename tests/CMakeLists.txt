@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 The NØR Browser authors
 # NØR Browser test suite (Qt Test + CTest).
 #
 # Unit tests run with the offscreen platform plugin; WebEngine-based tests

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 The NØR Browser authors
 #include "TopSitesStore.h"
 
 #include <QDateTime>
@@ -10,6 +12,7 @@
 #include <QJsonObject>
 #include <QSaveFile>
 #include <QSet>
+#include <QUrlQuery>
 
 #include <cmath>
 
@@ -18,6 +21,12 @@ using namespace std::chrono_literals;
 namespace {
 // One half-life: visits older than this count for half their weight.
 constexpr qreal kHalfLifeDays = 14.0;
+
+// Derived tiles must show REAL activity: a site whose whole decayed
+// score is below this has not been used in months and must not fill a
+// slot just because the history is short ("most visited" means most
+// visited, not "least forgotten"). Pins are exempt — they are explicit.
+constexpr qreal kMinDerivedScore = 0.05;
 
 // Common two-level public suffixes (a practical subset of the PSL — no
 // dependency, covers the regions users actually hit). "www" is never a
@@ -218,6 +227,65 @@ QString TopSitesStore::baseDomainOf(const QString &host)
     return labels.at(labels.size() - 2) + QLatin1Char('.') + labels.last();
 }
 
+void TopSitesStore::setEngineUrlTemplates(const QStringList &templates)
+{
+    QStringList next;
+    for (const QString &t : templates) {
+        const QString trimmed = t.trimmed();
+        if (!trimmed.isEmpty() && !next.contains(trimmed))
+            next.append(trimmed);
+    }
+    if (next == m_engineTemplates)
+        return;
+    m_engineTemplates = next;
+    scheduleRefresh();
+}
+
+bool TopSitesStore::isEnginePageUrl(const QString &url, const QStringList &templates)
+{
+    if (templates.isEmpty() || url.isEmpty())
+        return false;
+    const QUrl u(url);
+    const QString host = u.host().toLower();
+    if (host.isEmpty())
+        return false;
+    const QString base = baseDomainOf(host);
+    if (base.isEmpty())
+        return false;
+    for (const QString &tmpl : templates) {
+        const QUrl tu(tmpl);
+        if (baseDomainOf(tu.host().toLower()) != base)
+            continue;
+        // The engine's query key is the parameter that carries "%s"
+        // ("?q=%s" -> "q", "?search=%s" -> "search").
+        QString key;
+        {
+            const int qmark = tmpl.indexOf(QLatin1Char('?'));
+            if (qmark >= 0) {
+                const QStringList pairs = tmpl.mid(qmark + 1).split(QLatin1Char('&'));
+                for (const QString &pair : pairs) {
+                    if (pair.contains(QLatin1String("%s"))) {
+                        key = pair.section(QLatin1Char('='), 0, 0);
+                        break;
+                    }
+                }
+            }
+        }
+        if (!key.isEmpty()) {
+            // Same site + the engine's query parameter present: a result
+            // page ("?q=whatever" — the value is the user's query).
+            if (QUrlQuery(u).hasQueryItem(key))
+                return true;
+        } else {
+            // Path-based template (no query): match the path exactly, so
+            // the engine's own page is still recognised.
+            if (u.path() == tu.path())
+                return true;
+        }
+    }
+    return false;
+}
+
 void TopSitesStore::load()
 {
     m_pinned.clear();
@@ -249,6 +317,30 @@ void TopSitesStore::load()
         m_removedHosts.append(v.toString());
     for (const QJsonValue &v : root.value(QLatin1String("removedUrls")).toArray())
         m_removedUrls.append(v.toString());
+
+    // Self-heal: state written by OLDER builds may hold several pins for
+    // the SAME site (they grouped tiles per host, so "x.com" and
+    // "www.x.com" pins coexisted). One tile per site is the contract, so
+    // duplicate pins collapse to the first — at load time, and the healed
+    // list is written back so the file itself stops carrying the cruft.
+    {
+        QSet<QString> seenBases;
+        bool dropped = false;
+        for (int i = 0; i < m_pinned.size();) {
+            const QUrl u(m_pinned.at(i).url);
+            const QString base = baseDomainOf(u.host().toLower());
+            if (!base.isEmpty() && seenBases.contains(base)) {
+                m_pinned.removeAt(i);
+                dropped = true;
+                continue;
+            }
+            if (!base.isEmpty())
+                seenBases.insert(base);
+            ++i;
+        }
+        if (dropped)
+            save();
+    }
 }
 
 bool TopSitesStore::save()
@@ -312,6 +404,12 @@ QVector<TopSite> TopSitesStore::topSites(int limit) const
             const QString host = hostOf(e.url);
             if (host.isEmpty())
                 continue; // only http(s) pages
+            // Search-engine result pages are navigation by-products
+            // ("x at DuckDuckGo") — they never feed a tile: not the score,
+            // not the representative URL. Pins are exempt (pass 2).
+            if (!m_engineTemplates.isEmpty()
+                && isEnginePageUrl(e.url, m_engineTemplates))
+                continue;
             const QString base = baseDomainOf(host);
             if (base.isEmpty())
                 continue;
@@ -382,6 +480,9 @@ QVector<TopSite> TopSitesStore::topSites(int limit) const
         if (usedBases.contains(it.key()))
             continue; // already represented by a pin
         if (usedUrls.contains(it.value().entry.url))
+            continue;
+        // Long-dead sites do not take slots from living ones.
+        if (it.value().totalScore < kMinDerivedScore)
             continue;
         ranked.append(qMakePair(it.key(), it.value()));
     }

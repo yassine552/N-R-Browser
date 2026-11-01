@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 The NØR Browser authors
 // Unit tests for the Firefox-style Top Sites system: frecency ranking,
 // host grouping, pin/unpin/remove/edit semantics, state persistence,
 // history-clear behaviour, and the local favicon cache (including the
@@ -31,9 +33,19 @@ private slots:
     void rankingFrequencyAndRecency();
     void rankingHostGrouping();
     void rankingSubdomainsMergeIntoBase();
+    void rankingManyPathsOneTile();
     void rankingStaleSiteSinks();
     void rankingExcludesNonHttp();
     void limitRespected();
+
+    // ---- search-engine exclusion ------------------------------------------
+    void searchExclusionHidesDerivedTiles();
+    void searchExclusionIsPatternBased();
+    void searchExclusionKeepsPins();
+    void isEnginePageUrlCases();
+
+    // ---- state self-healing ------------------------------------------------
+    void loadSelfHealsDuplicatePins();
 
     // ---- pins / removals / edits ------------------------------------------
     void pinSurvivesRankingAndClear();
@@ -214,6 +226,48 @@ void TestTopSites::rankingSubdomainsMergeIntoBase()
     QVERIFY(z->faviconHosts.size() >= 3);
 }
 
+void TestTopSites::rankingManyPathsOneTile()
+{
+    QScopedPointer<HistoryStore> h(makeHistory());
+    const qint64 now = QDateTime::currentSecsSinceEpoch();
+    // THE user-reported duplicate: one service reached through MANY links
+    // (test runs, direct links, subpages) used to fill several tiles with
+    // the same site. One base domain => exactly one tile, whatever the
+    // number of distinct URLs.
+    const char *cvt[] = {
+        "https://coveryourtracks.eff.org/",
+        "https://coveryourtracks.eff.org/about",
+        "https://coveryourtracks.eff.org/learn",
+        "https://coveryourtracks.eff.org/what-is-fingerprinting",
+        "https://coveryourtracks.eff.org/test",
+        "https://coveryourtracks.eff.org/results",
+        "https://coveryourtracks.eff.org/faq",
+    };
+    for (const char *u : cvt)
+        seed(h.data(), u, "Cover Your Tracks", 3, now - 86400);
+    // Same host again through a www. spelling, plus one unrelated site.
+    seed(h.data(), "https://www.7-zip.org/", "7-Zip", 4, now - 86400);
+    seed(h.data(), "https://example.com/", "Example", 2, now - 86400);
+    TopSitesStore store(h.data(), statePath());
+    const QVector<TopSite> top = store.topSites(10);
+    QCOMPARE(top.size(), 3);
+    int cvtTiles = 0, zipTiles = 0;
+    for (const TopSite &s : top) {
+        if (s.baseDomain == QLatin1String("eff.org"))
+            ++cvtTiles;
+        if (s.baseDomain == QLatin1String("7-zip.org"))
+            ++zipTiles;
+    }
+    QCOMPARE(cvtTiles, 1);   // seven URLs, ONE tile
+    QCOMPARE(zipTiles, 1);
+    // All the visit weight still counts: the merged tile outranks the
+    // 4-visit 7-Zip tile (21 decayed visits vs 4).
+    const auto it = std::find_if(top.cbegin(), top.cend(),
+                                 [](const TopSite &s) { return s.baseDomain == QLatin1String("eff.org"); });
+    QVERIFY(it != top.cend());
+    QVERIFY(it->score > 4.0);
+}
+
 void TestTopSites::rankingStaleSiteSinks()
 {
     QScopedPointer<HistoryStore> h(makeHistory());
@@ -221,7 +275,9 @@ void TestTopSites::rankingStaleSiteSinks()
     seed(h.data(), "https://stale.example/", "Stale", 200, now - 400 * 86400);
     seed(h.data(), "https://fresh.example/", "Fresh", 2, now - 86400);
     TopSitesStore store(h.data(), statePath());
-    const QVector<TopSite> top = store.topSites(1);
+    // Below the derived-score floor the stale site loses its slot even
+    // with plenty of room: "most visited", not "least forgotten".
+    const QVector<TopSite> top = store.topSites(10);
     QCOMPARE(top.size(), 1);
     QCOMPARE(top.at(0).host, QStringLiteral("fresh.example"));
 }
@@ -245,6 +301,138 @@ void TestTopSites::limitRespected()
                     now - i * 86400);
     TopSitesStore store(h.data(), statePath());
     QCOMPARE(store.topSites(6).size(), 6);
+}
+
+// ------------------------------------------- search-engine exclusion ----
+
+void TestTopSites::searchExclusionHidesDerivedTiles()
+{
+    // The pattern from the user's report: DuckDuckGo result pages for the
+    // queries used to FIND the sites, with the sites themselves visited
+    // only via those searches. The engine must never take a derived slot.
+    QScopedPointer<HistoryStore> h(makeHistory());
+    const qint64 now = QDateTime::currentSecsSinceEpoch();
+    seed(h.data(), "https://duckduckgo.com/?q=browserleaks", "browserleaks at DuckDuckGo",
+         8, now - 3600);
+    seed(h.data(), "https://duckduckgo.com/?q=https%3A%2F%2Fiphey.com%2F",
+         "https://iphey.com/ at DuckDuckGo", 6, now - 3500);
+    seed(h.data(), "https://browserleaks.com/",
+         "BrowserLeaks - Check your browser for privacy leaks", 3, now - 3000);
+    seed(h.data(), "https://iphey.com/", "Iphey", 2, now - 2900);
+    TopSitesStore store(h.data(), statePath());
+
+    // Before the exclusion is configured, the engine CAN rank (it is the
+    // most visited host — exactly the bug).
+    {
+        const QVector<TopSite> top = store.topSites(10);
+        QVERIFY(top.size() >= 3);
+        QCOMPARE(top.at(0).baseDomain, QStringLiteral("duckduckgo.com"));
+    }
+
+    store.setEngineUrlTemplates(
+        QStringList{ QStringLiteral("https://duckduckgo.com/?q=%s") });
+    const QVector<TopSite> top = store.topSites(10);
+    for (const TopSite &s : top)
+        QVERIFY(s.baseDomain != QStringLiteral("duckduckgo.com"));
+    QCOMPARE(top.size(), 2); // the two real sites, nothing else
+    QCOMPARE(top.at(0).host, QStringLiteral("browserleaks.com"));
+    QCOMPARE(top.at(1).host, QStringLiteral("iphey.com"));
+}
+
+void TestTopSites::searchExclusionIsPatternBased()
+{
+    // A content site that doubles as an engine (Wikipedia) only loses its
+    // SEARCH pages — articles survive, and the engine page never becomes
+    // the representative URL of the tile.
+    QScopedPointer<HistoryStore> h(makeHistory());
+    const qint64 now = QDateTime::currentSecsSinceEpoch();
+    seed(h.data(), "https://en.wikipedia.org/w/index.php?search=privacy",
+         "privacy - Search - Wikipedia", 7, now - 3600);
+    seed(h.data(), "https://en.wikipedia.org/wiki/Privacy", "Privacy - Wikipedia", 5, now - 3400);
+    seed(h.data(), "https://www.youtube.com/", "YouTube", 2, now - 3300);
+    TopSitesStore store(h.data(), statePath());
+    store.setEngineUrlTemplates(QStringList{
+        QStringLiteral("https://duckduckgo.com/?q=%s"),
+        QStringLiteral("https://en.wikipedia.org/w/index.php?search=%s"),
+        QStringLiteral("https://www.google.com/search?q=%s"),
+    });
+    const QVector<TopSite> top = store.topSites(10);
+    QCOMPARE(top.size(), 2);
+    QCOMPARE(top.at(0).host, QStringLiteral("en.wikipedia.org"));
+    // The representative URL is the ARTICLE, not the search page.
+    QCOMPARE(top.at(0).url, QStringLiteral("https://en.wikipedia.org/wiki/Privacy"));
+    QCOMPARE(top.at(1).host, QStringLiteral("www.youtube.com"));
+}
+
+void TestTopSites::searchExclusionKeepsPins()
+{
+    // A pinned engine page is an explicit user action — it stays.
+    QScopedPointer<HistoryStore> h(makeHistory());
+    const qint64 now = QDateTime::currentSecsSinceEpoch();
+    seed(h.data(), "https://duckduckgo.com/?q=x", "x at DuckDuckGo", 9, now - 60);
+    TopSitesStore store(h.data(), statePath());
+    store.setEngineUrlTemplates(
+        QStringList{ QStringLiteral("https://duckduckgo.com/?q=%s") });
+    QCOMPARE(store.topSites(10).size(), 0); // derived: hidden
+    QVERIFY(store.pinSite(QUrl(QStringLiteral("https://duckduckgo.com/")),
+                          QStringLiteral("DuckDuckGo")));
+    const QVector<TopSite> top = store.topSites(10);
+    QCOMPARE(top.size(), 1);
+    QVERIFY(top.at(0).pinned);
+    QCOMPARE(top.at(0).host, QStringLiteral("duckduckgo.com"));
+}
+
+void TestTopSites::isEnginePageUrlCases()
+{
+    using TSS = TopSitesStore;
+    const QStringList engines{
+        QStringLiteral("https://duckduckgo.com/?q=%s"),
+        QStringLiteral("https://www.google.com/search?q=%s"),
+        QStringLiteral("https://en.wikipedia.org/w/index.php?search=%s"),
+    };
+    QVERIFY(TSS::isEnginePageUrl("https://duckduckgo.com/?q=browserleaks", engines));
+    QVERIFY(TSS::isEnginePageUrl("https://www.google.com/search?q=privacy", engines));
+    QVERIFY(TSS::isEnginePageUrl("https://google.com/search?q=privacy", engines)); // www-insensitive
+    QVERIFY(TSS::isEnginePageUrl(
+        "https://en.wikipedia.org/w/index.php?search=privacy", engines));
+    QVERIFY(!TSS::isEnginePageUrl("https://en.wikipedia.org/wiki/Privacy", engines));
+    QVERIFY(!TSS::isEnginePageUrl("https://duckduckgo.com/", engines)); // engine home: a real destination
+    QVERIFY(!TSS::isEnginePageUrl("https://browserleaks.com/", engines));
+    QVERIFY(!TSS::isEnginePageUrl("https://duckduckgo.com/?q=a", QStringList()));
+    QVERIFY(!TSS::isEnginePageUrl("about:blank", engines));
+    QVERIFY(!TSS::isEnginePageUrl(QString(), engines));
+}
+
+// ------------------------------------------------ state self-healing ----
+
+void TestTopSites::loadSelfHealsDuplicatePins()
+{
+    // State written by an OLDER build (per-host grouping): three pins for
+    // what is ONE site. Loading collapses them; the first pin wins.
+    const QString path = statePath();
+    {
+        QFile f(path);
+        QVERIFY(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        f.write(R"({
+  "pinned": [
+    {"url": "https://coveryourtracks.eff.org/", "title": "Cover Your Tracks"},
+    {"url": "https://panopticlick.eff.org/", "title": "Cover Your Tracks"},
+    {"url": "https://www.coveryourtracks.eff.org/", "title": "Cover Your Tracks"},
+    {"url": "https://github.com/", "title": "GitHub"}
+  ],
+  "removedHosts": [],
+  "removedUrls": []
+})");
+    }
+    QScopedPointer<HistoryStore> h(makeHistory());
+    TopSitesStore store(h.data(), path);
+    const QVector<TopSite> top = store.topSites(10);
+    QCOMPARE(top.size(), 2);
+    QCOMPARE(top.at(0).host, QStringLiteral("coveryourtracks.eff.org"));
+    QCOMPARE(top.at(1).host, QStringLiteral("github.com"));
+    // ...and the healing is persisted for the next start.
+    TopSitesStore reopened(h.data(), path);
+    QCOMPARE(reopened.topSites(10).size(), 2);
 }
 
 // ---------------------------------------------------- pins / edits ----

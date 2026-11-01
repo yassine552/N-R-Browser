@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 The NØR Browser authors
 # NØR Browser — performance measurements (real runs, no estimates).
 # Measures: startup time to first page load, idle RSS (whole process tree)
 # with 1/5 tabs, with the full EasyList+EasyPrivacy engine loaded.

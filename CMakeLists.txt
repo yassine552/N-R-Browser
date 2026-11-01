@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 The NØR Browser authors
 cmake_minimum_required(VERSION 3.21)
 
 project(nor-browser VERSION 1.0.0 LANGUAGES CXX)

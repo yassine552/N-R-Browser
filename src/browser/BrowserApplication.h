@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 The NØR Browser authors
 #pragma once
 
 #include <QObject>
@@ -63,6 +65,11 @@ public:
     // focus/typing, customization panel, AR/FR/EN, 1366x768. Saves
     // screenshots into <dir>.
     int runSmokeNewTab(const QString &screenshotDir);
+    // Polish showcase matrix: SEEDED history + favicons so real tiles
+    // render over every background family, with the no-duplicate
+    // guarantee, open suggestion dropdown, customize panel, solid mode,
+    // AR/FR/EN at 1366x768. Saves screenshots into <dir>.
+    int runSmokeShowcase(const QString &screenshotDir);
 
     // ---- window management -------------------------------------------------
     BrowserWindow *createWindow(bool privateMode = false, const QUrl &startUrl = QUrl());
@@ -93,6 +100,9 @@ private slots:
 private:
     void createServices();
     void connectServices();
+    // URL templates of all configured search engines (see createServices:
+    // their result pages are excluded from derived Top-Sites tiles).
+    QStringList searchEngineUrlTemplates() const;
 
     AppConfig *m_config = nullptr;
     LanguageManager *m_languages = nullptr;

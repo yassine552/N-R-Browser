@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 The NØR Browser authors
 # NorCore: pure-logic library shared by the browser UI and the unit tests.
 # It must NOT depend on QtWebEngine so that the ad-block engine, settings and
 # storage logic can be tested headlessly (QT_QPA_PLATFORM=offscreen).

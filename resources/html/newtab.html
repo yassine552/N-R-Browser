@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+SPDX-FileCopyrightText: 2026 The NØR Browser authors
+-->
 <html lang="{{LANG}}" dir="{{DIR}}">
 <head>
 <meta charset="utf-8">
@@ -9,9 +13,14 @@
   {{PALETTE_CSS}}
   :root {
     /* Glass tokens. --glass-alpha is set at runtime from the user's
-       transparency preference; colors flip with the background scheme. */
-    --glass-alpha: 0.55;
-    --glass-blur: 16px;
+       transparency preference; colors flip with the background scheme.
+       Tuned against the artwork set: 0.48 tint + 18px blur + saturate(1.3)
+       reads as real glass on every bundled background while text stays
+       AA-contrast (the VLM pass on the 1366x768 matrix confirmed it). */
+    --glass-alpha: 0.48;
+    --glass-blur: 18px;
+    --glass-tint: 20, 22, 30;
+    --glass-highlight: rgba(255, 255, 255, 0.10);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   /* The canvas color lives on <html>; <body> stays transparent — a
@@ -89,13 +98,13 @@
      directly beneath, so the page reads complete with one site or with
      twenty. */
   .wrap {
-    width: min(700px, 94vw);
+    width: min(780px, 94vw);
     margin: 0 auto;
     padding: clamp(44px, 11vh, 104px) 24px 56px 24px;
   }
   .logo {
     width: 52px; height: 52px;
-    margin: 0 auto 12px auto;
+    margin: 0 auto 14px auto;
     border-radius: 14px;
     background: var(--accent);
     display: flex; align-items: center; justify-content: center;
@@ -105,18 +114,21 @@
   h1 {
     font-size: 16.5px;
     font-weight: 600;
-    margin-bottom: 22px;
+    margin-bottom: 26px;
     color: var(--fg);
     text-align: center;
   }
 
   /* ---- glass search bar -----------------------------------------------------
      REAL glassmorphism, the Brave-quality way:
-       - a semi-transparent tint + backdrop blur on the CONTAINER;
+       - a semi-transparent tint + backdrop blur + light saturation boost
+         on the CONTAINER (the wallpaper visibly refracts through it);
+       - a 1px top inner highlight = glass "thickness" (no glow);
        - the input itself is fully transparent with FULL-OPACITY text —
          no opacity() ever touches text or icons;
        - dimensions are fixed: focusing or typing never resizes or shifts
-         the layout, and the suggestion/placeholder stays readable.
+         the layout, and the suggestion dropdown is absolutely positioned
+         so opening it cannot move anything either.
      The tint alpha is user-controlled; with blur off (or unsupported) the
      alpha is raised instead — readable on every background. */
   form.search {
@@ -128,9 +140,13 @@
     padding: 6px;
     border-radius: 14px;
     border: 1px solid var(--glass-line);
-    background: rgba(22, 24, 29, var(--glass-alpha));
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.25);
-    backdrop-filter: blur(var(--glass-blur)) saturate(1.25);
+    background: rgba(var(--glass-tint), var(--glass-alpha));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.3);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.3);
+    /* thickness: 1px light catch on the top edge + one soft drop shadow
+       (never a colored glow) */
+    box-shadow: inset 0 1px 0 var(--glass-highlight),
+                0 8px 28px rgba(0, 0, 0, 0.18);
     direction: ltr; /* the query field keeps LTR even in Arabic layout */
     transition: border-color .14s ease, box-shadow .14s ease;
     max-width: 640px;
@@ -140,7 +156,8 @@
     background: rgba(250, 250, 252, calc(var(--glass-alpha) * 0.92));
     /* Soft lift: on light skies a glass sheet needs an edge shadow to
        read as a surface (Brave does the same on bright wallpapers). */
-    box-shadow: 0 6px 24px rgba(40, 46, 60, 0.20);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55),
+                0 6px 24px rgba(40, 46, 60, 0.20);
   }
   /* Blur disabled or unsupported: trade blur for tint (still no text
      opacity, still readable). */
@@ -148,7 +165,7 @@
   body:not(.bg-on) form.search {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
-    background: rgba(22, 24, 29, calc(var(--glass-alpha) + 0.30));
+    background: rgba(var(--glass-tint), calc(var(--glass-alpha) + 0.30));
   }
   body.no-blur.bg-on.light-bg form.search,
   body.no-blur.theme-light form.search,
@@ -159,19 +176,27 @@
     form.search {
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
-      background: rgba(22, 24, 29, calc(var(--glass-alpha) + 0.30));
+      background: rgba(var(--glass-tint), calc(var(--glass-alpha) + 0.30));
     }
     body.bg-on.light-bg form.search,
     body.theme-light form.search {
       background: rgba(250, 250, 252, calc(var(--glass-alpha) + 0.30));
     }
   }
+  /* Focus: a brighter hairline + a quiet 1px accent ring — elegant, NOT
+     a bright purple border and NOT a glowing halo. */
   form.search:focus-within {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.28);
+    border-color: var(--glass-line-strong);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14),
+                0 8px 28px rgba(0, 0, 0, 0.18),
+                0 0 0 1px rgba(139, 92, 246, 0.35),
+                0 0 0 4px rgba(139, 92, 246, 0.12);
   }
   body.bg-on.light-bg form.search:focus-within {
-    box-shadow: 0 6px 24px rgba(40, 46, 60, 0.20), 0 0 0 3px rgba(139, 92, 246, 0.28);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55),
+                0 6px 24px rgba(40, 46, 60, 0.20),
+                0 0 0 1px rgba(139, 92, 246, 0.35),
+                0 0 0 4px rgba(139, 92, 246, 0.12);
   }
   form.search .q-glyph {
     flex: 0 0 auto;
@@ -208,23 +233,136 @@
   form.search button:hover { background: var(--accent-hover); }
   [dir="rtl"] form.search button { font-family: inherit; }
 
+  /* ---- search suggestions (offline completions) ----------------------------
+     Brave-style dropdown: the first row is always the search action, the
+     rows below are offline completions (Top Sites, popular sites, local
+     history). It is absolutely positioned inside the (relative) form, so
+     opening it NEVER shifts the layout. Same glass language as the bar;
+     selection is a quiet surface tint, not a purple slab. */
+  .suggest {
+    position: absolute;
+    top: calc(100% + 8px);
+    inset-inline: 0;
+    z-index: 55;
+    border-radius: 14px;
+    border: 1px solid var(--glass-line-strong);
+    /* The sheet must read as a SOLID floating layer above the tiles —
+       the wallpaper/tiles behind are dimmed and blurred, never
+       interleaved with the rows (that collision was the bug). */
+    background: rgba(var(--glass-tint), calc(var(--glass-alpha) + 0.34));
+    -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(1.35);
+    backdrop-filter: blur(calc(var(--glass-blur) + 6px)) saturate(1.35);
+    box-shadow: inset 0 1px 0 var(--glass-highlight),
+                0 18px 48px rgba(0, 0, 0, 0.42);
+    overflow-y: auto;              /* long lists scroll INSIDE the sheet */
+    overscroll-behavior: contain;
+    max-height: min(316px, 46vh);  /* never run down into the tiles far below */
+    display: none;
+    text-align: start;
+  }
+  .suggest.open { display: block; }
+  body.bg-on.light-bg .suggest {
+    background: rgba(250, 250, 252, calc(var(--glass-alpha) + 0.42));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55),
+                0 18px 48px rgba(40, 46, 60, 0.40);
+  }
+  body.no-blur .suggest,
+  body:not(.bg-on) .suggest {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: var(--elevated);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.38);
+  }
+  /* While the completion sheet is open, the Top Sites section recedes:
+   * a quiet focus dim (the sheet owns the layer, the tiles become
+   * background). Applied to the SECTION, never to the search glass or
+   * any row text — text opacity rules stay untouched. */
+  #topsites {
+    transition: opacity .18s ease, filter .18s ease;
+  }
+  body.suggest-open #topsites {
+    opacity: 0.45;
+    filter: saturate(0.85);
+  }
+  .suggest .s-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 14px;
+    cursor: pointer;
+    color: var(--fg-dim);
+    border-radius: 0;              /* rows are flush; the sheet is rounded */
+  }
+  .suggest .s-row .s-ico svg { flex: 0 0 auto; }
+  .suggest .s-row.sel {
+    background: rgba(255, 255, 255, 0.09);
+    color: var(--fg);
+  }
+  body.bg-on.light-bg .suggest .s-row.sel { background: rgba(0, 0, 0, 0.07); }
+  body:not(.bg-on) .suggest .s-row.sel,
+  body.no-blur .suggest .s-row.sel { background: var(--hover); color: var(--text); }
+  .suggest .s-ico {
+    flex: 0 0 auto;
+    width: 18px; height: 18px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--fg-muted);
+  }
+  .suggest .s-ico svg { width: 16px; height: 16px; }
+  .suggest .s-ico img { width: 16px; height: 16px; border-radius: 4px; }
+  .suggest .s-ico .letter {
+    width: 18px; height: 18px;
+    border-radius: 5px;
+    background: rgba(127, 131, 140, 0.22);
+    color: var(--fg-dim);
+    font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .suggest .s-txt {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .suggest .s-name {
+    font-size: 13.5px;
+    color: var(--fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    unicode-bidi: plaintext;   /* the typed query renders in its own bidi */
+  }
+  .suggest .s-sub {
+    flex: 0 0 auto;
+    font-size: 11.5px;
+    color: var(--fg-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    direction: ltr;             /* hosts and engine names stay LTR */
+    unicode-bidi: plaintext;
+  }
+  [dir="rtl"] .suggest { direction: rtl; }  /* the sheet mirrors even though the query field stays LTR */
+  [dir="rtl"] .suggest .s-sub { text-align: left; }
+
   /* ---- Top Sites (glass tiles) -------------------------------------------- */
   .section-title {
-    margin: 34px 2px 10px 2px;
+    margin: 48px 2px 10px 2px;   /* breathing room: a 2-row completion sheet fits above */
     color: var(--fg-muted);
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 1.1px;
     text-transform: uppercase;
-    text-align: start;
+    text-align: center;      /* the rows below center; so does the label */
   }
   .grid {
-    display: grid;
-    /* No-JS fallback; the script below replaces it with an explicit,
-    layout-balanced column count (Firefox-style: never a lone last tile
-    when the space allows). */
-    grid-template-columns: repeat(auto-fill, minmax(104px, 116px));
+    /* Flex rows center INDEPENDENTLY: 7 tiles read 4+3 with BOTH rows
+       centered (no orphan hole on one side), a lone site sits dead
+       center, and no column math is needed at all. */
+    display: flex;
+    flex-wrap: wrap;
     justify-content: center;
+    align-content: flex-start;
     gap: 10px;
   }
   a.site {
@@ -233,34 +371,41 @@
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    padding: 14px 8px 12px 8px;
+    padding: 16px 8px 14px 8px;
     border-radius: 12px;
     text-decoration: none;
-    color: var(--fg-dim);
+    color: var(--fg);
     border: 1px solid var(--glass-line);
-    background: rgba(22, 24, 29, calc(var(--glass-alpha) * 0.72));
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    transition: background-color .14s ease, border-color .14s ease;
+    background: rgba(var(--glass-tint), calc(var(--glass-alpha) * 0.72));
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    /* same glass language as the search bar: top light catch, no glow */
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    transition: background-color .14s ease, border-color .14s ease,
+                transform .14s ease;
     outline: none;
+    flex: 0 0 112px;   /* never squish — wrap to the next centered row */
   }
   body.bg-on.light-bg a.site {
     background: rgba(250, 250, 252, calc(var(--glass-alpha) * 0.66));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
   }
   body.no-blur a.site,
   body:not(.bg-on) a.site {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
     background: var(--hover);
+    box-shadow: none;
   }
   body.no-blur a.site:hover,
   body:not(.bg-on) a.site:hover { background: var(--active); }
   a.site:hover, a.site:focus-visible {
     border-color: var(--glass-line-strong);
     color: var(--fg);
+    transform: translateY(-1px);   /* quiet lift, never a jump */
   }
   body.bg-on a.site:hover, body.bg-on a.site:focus-visible {
-    background: rgba(28, 30, 36, calc(var(--glass-alpha) + 0.14));
+    background: rgba(var(--glass-tint), calc(var(--glass-alpha) + 0.14));
   }
   body.bg-on.light-bg a.site:hover,
   body.bg-on.light-bg a.site:focus-visible {
@@ -714,8 +859,9 @@
     <h1 class="hero-text">{{GREETING}}</h1>
     <form class="search" onsubmit="return go()">
       <svg class="q-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input id="q" type="text" placeholder="{{SEARCH_PLACEHOLDER}}" autofocus autocomplete="off">
+      <input id="q" type="text" placeholder="{{SEARCH_PLACEHOLDER}}" autofocus autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="suggest">
       <button type="submit">{{SEARCH_BUTTON}}</button>
+      <div class="suggest" id="suggest" role="listbox"></div>
     </form>
     <div id="topsites"></div>
   </div>
@@ -746,8 +892,8 @@
     </div>
     <div class="section">{{CUSTOMIZE_OPACITY}}</div>
     <div class="opacity-row">
-      <div class="lbl"><span>{{CUSTOMIZE_OPACITY}}</span><b id="opacityVal">55%</b></div>
-      <input type="range" id="opacity" min="30" max="90" step="5" value="55">
+      <div class="lbl"><span>{{CUSTOMIZE_OPACITY}}</span><b id="opacityVal">48%</b></div>
+      <input type="range" id="opacity" min="30" max="90" step="1" value="48">
     </div>
     <div class="section">{{CUSTOMIZE_BLUR}}</div>
     <label class="switch-row">
@@ -790,6 +936,9 @@
   <script>
     var ENGINE = {{ENGINE_JSON}};
     var SITES = {{TOPSITES_JSON}};
+    var SUGGEST = {{SUGGEST_JSON}};
+    var QUERIES = {{QUERIES_JSON}};   /* past searches, local history only */
+    var SEARCH_WITH = "{{SEARCH_WITH}}";
     var READONLY = {{READONLY}} === 1;
     var P = {{NEWTAB_JSON}};
 
@@ -805,7 +954,15 @@
       solid: "{{CUSTOMIZE_NONE}}"
     };
 
+    var suggestNav = null;   // set when a suggestion row was activated
     function go() {
+      // An activated suggestion row wins over the plain search.
+      if (suggestNav) {
+        var u = suggestNav;
+        suggestNav = null;
+        window.location.href = u;
+        return false;
+      }
       var q = document.getElementById("q").value.trim();
       if (!q) return false;
       var url = ENGINE.url.replace("%s", encodeURIComponent(q));
@@ -833,6 +990,257 @@
       }
       window.location.href = u;
     }
+
+    /* ------------------------------------------------ search suggestions --
+     OFFLINE completions, Brave-style: while the user types, the field
+     offers the search action plus matching sites — Top Sites first, then
+     a bundled popular-sites list, then hosts from the LOCAL history.
+     Everything was injected server-side; matching is prefix/contains in
+     the page, so not one keystroke ever leaves the machine (and private
+     mode never even receives history entries — C++ filters them out).
+     The dropdown is absolutely positioned: opening it never shifts the
+     layout, exactly like the fixed search-bar size. */
+
+    var TWO_LEVEL = {
+      "co.uk": 1, "org.uk": 1, "gov.uk": 1, "ac.uk": 1, "me.uk": 1,
+      "co.jp": 1, "com.au": 1, "net.au": 1, "org.au": 1,
+      "com.br": 1, "com.cn": 1, "com.mx": 1, "com.ar": 1,
+      "com.tr": 1, "com.eg": 1, "com.sa": 1, "com.dz": 1, "com.tn": 1,
+      "com.ma": 1, "co.za": 1, "co.nz": 1, "co.in": 1, "com.pl": 1,
+      "com.sg": 1, "com.my": 1, "co.id": 1, "com.vn": 1, "com.ph": 1,
+      "com.pk": 1, "co.il": 1, "co.kr": 1, "com.tw": 1, "com.hk": 1,
+      "com.ng": 1, "com.ua": 1, "com.ru": 1, "com.pt": 1, "com.gr": 1,
+      "com.uy": 1, "com.co": 1, "com.pe": 1, "com.ec": 1, "com.py": 1,
+      "com.do": 1, "com.gt": 1, "com.sv": 1, "com.ni": 1, "com.cr": 1,
+      "com.pa": 1, "com.ve": 1, "com.bo": 1, "com.qa": 1, "com.kw": 1,
+      "com.bh": 1, "com.om": 1, "com.ae": 1, "com.jo": 1, "com.lb": 1,
+      "com.ly": 1, "com.iq": 1, "com.kz": 1, "com.uz": 1, "com.az": 1
+    };
+    function baseDomain(host) {
+      var h = String(host || "").toLowerCase();
+      while (h.indexOf("www.") === 0) h = h.slice(4);
+      var parts = h.split(".");
+      if (parts.length < 2) return h;
+      var two = parts.slice(-2).join(".");
+      if (TWO_LEVEL[two] && parts.length >= 3) return parts.slice(-3).join(".");
+      return two;
+    }
+
+    // Completion index: one entry per base domain (tiles and popular
+    // entries never fight over the same site), and one per DISPLAY NAME —
+    // two rows that read identically are a bug, not a choice.
+    var INDEX = (function () {
+      var out = [], seen = {}, seenName = {};
+      (SUGGEST || []).forEach(function (e) {
+        if (!e || !e.host) return;
+        var b = baseDomain(e.host);
+        if (b && seen[b]) return;
+        var n = String(e.name || "").trim().toLowerCase();
+        if (n && seenName[n]) return;
+        if (b) seen[b] = 1;
+        if (n) seenName[n] = 1;
+        out.push(e);
+      });
+      return out;
+    })();
+
+    // Host minus its TLD ("7-zip.org" -> "7-zip"): a query that only
+    // matches inside ".org" / ".com" is TLD noise, not a site match —
+    // typing "g" must not surface every .org site the user visited.
+    function coreHost(host) {
+      var i = host.lastIndexOf(".");
+      if (i > 0 && host.length - i - 1 <= 4) return host.slice(0, i);
+      return host;
+    }
+
+    function findMatches(q) {
+      var ql = q.toLowerCase();
+      var prefix = [], contains = [];
+      for (var i = 0; i < INDEX.length; i++) {
+        var e = INDEX[i];
+        // Match (and display) the bare host: "yout" completes to
+        // "youtube.com", never "www.youtube.com". Matching runs on the
+        // SHORT site name + host (TLD excluded from "contains") — never
+        // on full page titles, so irrelevant rows can no longer sneak in.
+        var host = String(e.host || "").toLowerCase();
+        if (host.indexOf("www.") === 0) host = host.slice(4);
+        var core = coreHost(host);
+        var name = String(e.name || "").toLowerCase();
+        if (host.indexOf(ql) === 0 || core.indexOf(ql) === 0 || name.indexOf(ql) === 0) {
+          prefix.push(e);
+        } else if (name.indexOf(ql) !== -1 || core.indexOf(ql) !== -1) {
+          contains.push(e);
+        }
+        if (prefix.length >= 5) break;
+      }
+      return prefix.concat(contains).slice(0, 5);
+    }
+
+    var SEARCH_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>';
+    var HISTORY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M12 8v4l3 2"/><path d="M3.05 11a9 9 0 1 1 .5 4"/><path d="M3 4v4h4"/></svg>';
+
+    var suggestRows = [];    // [{nav: url}] — index 0 is the search action
+    var suggestSel = -1;
+
+    function suggestActivate(i) {
+      if (i < 0 || i >= suggestRows.length) return;
+      var nav = suggestRows[i].nav;
+      suggestNav = nav;
+      if (i === 0) {
+        // Search action: submit through the normal path.
+        go();
+      } else {
+        window.location.href = nav;
+      }
+    }
+
+    // One toggle for BOTH signals: the sheet's .open class and the
+    // body-level "suggest-open" state (the Top Sites section recedes
+    // while the sheet owns the layer). Never let one drift from the other.
+    function setSheetOpen(open) {
+      var box = document.getElementById("suggest");
+      box.classList.toggle("open", open);
+      document.body.classList.toggle("suggest-open", open);
+      document.getElementById("q").setAttribute("aria-expanded", open ? "true" : "false");
+    }
+
+    function renderSuggest() {
+      var q = document.getElementById("q");
+      var box = document.getElementById("suggest");
+      var text = q.value.trim();
+      suggestRows = [];
+      suggestSel = -1;
+      box.textContent = "";
+      if (!text) { setSheetOpen(false); return; }
+
+      // Row 0 — the search action (always present, Brave-style).
+      var rows = [{
+        icon: SEARCH_ICON,
+        name: text,
+        sub: SEARCH_WITH,
+        nav: ENGINE.url.replace("%s", encodeURIComponent(text)),
+        query: true
+      }];
+
+      // Past searches — REAL query completions, drawn from the LOCAL
+      // history only (the engine result-page URLs), so typing "yo" offers
+      // "youtube music" if the user ever searched it — with zero network
+      // traffic. Private mode never even receives the list.
+      var tl = text.toLowerCase();
+      var seenQ = {};
+      for (var qi = 0; qi < (QUERIES || []).length && rows.length < 4; qi++) {
+        var past = String(QUERIES[qi] || "");
+        var pl = past.toLowerCase();
+        if (!past || past.length > 64 || pl === tl || seenQ[pl]) continue;
+        if (pl.indexOf(tl) !== 0) continue;
+        seenQ[pl] = 1;
+        rows.push({
+          icon: HISTORY_ICON,
+          name: past,
+          sub: ENGINE.name,
+          nav: ENGINE.url.replace("%s", encodeURIComponent(past)),
+          query: true
+        });
+      }
+
+      findMatches(text).forEach(function (e) {
+        var ico;
+        if (e.fav) {
+          ico = '<img src="' + escapeHtml(e.fav) + '" alt="" loading="lazy">';
+        } else {
+          ico = '<span class="letter">' +
+                escapeHtml((function () {
+                  var hh = String(e.host || "");
+                  while (hh.indexOf("www.") === 0) hh = hh.slice(4);
+                  return (hh.charAt(0) || "?").toUpperCase();
+                })()) + "</span>";
+        }
+        var shownHost = String(e.host || "");
+        if (shownHost.indexOf("www.") === 0) shownHost = shownHost.slice(4);
+        rows.push({
+          icon: ico,
+          name: e.name || e.host,
+          sub: shownHost,
+          nav: e.url
+        });
+      });
+
+      rows.forEach(function (r) {
+        var el = document.createElement("div");
+        el.className = "s-row";
+        el.setAttribute("role", "option");
+        el.innerHTML =
+          '<span class="s-ico">' + r.icon + "</span>" +
+          '<span class="s-txt"><span class="s-name">' + escapeHtml(r.name) +
+          "</span><span class=\"s-sub\">" + escapeHtml(r.sub) + "</span></span>";
+        (function (idx) {
+          el.addEventListener("mouseenter", function () { setSel(idx); });
+          el.addEventListener("mousedown", function (ev) {
+            ev.preventDefault();          // keep focus in the field
+            suggestActivate(idx);
+          });
+        })(suggestRows.length);
+        suggestRows.push({ nav: r.nav });
+        box.appendChild(el);
+      });
+
+      box.scrollTop = 0;
+      setSheetOpen(true);
+    }
+
+    function setSel(i) {
+      var box = document.getElementById("suggest");
+      var kids = box.children;
+      for (var k = 0; k < kids.length; ++k)
+        kids[k].classList.toggle("sel", k === i);
+      suggestSel = i;
+    }
+
+    function closeSuggest() {
+      var box = document.getElementById("suggest");
+      box.classList.remove("open");
+      box.textContent = "";
+      suggestRows = [];
+      suggestSel = -1;
+      document.body.classList.remove("suggest-open");
+      document.getElementById("q").setAttribute("aria-expanded", "false");
+    }
+
+    document.getElementById("q").addEventListener("input", renderSuggest);
+    document.getElementById("q").addEventListener("keydown", function (ev) {
+      var open = document.getElementById("suggest").classList.contains("open");
+      if (!open) {
+        if (ev.key === "ArrowDown" && this.value.trim()) renderSuggest();
+        return;
+      }
+      if (ev.key === "ArrowDown") {
+        ev.preventDefault();
+        setSel(Math.min(suggestSel + 1, suggestRows.length - 1));
+      } else if (ev.key === "ArrowUp") {
+        ev.preventDefault();
+        setSel(Math.max(suggestSel - 1, -1));
+      } else if (ev.key === "Enter") {
+        if (suggestSel >= 0) {
+          ev.preventDefault();
+          suggestActivate(suggestSel);
+        }
+        // sel === -1: let the form submit (plain search)
+      } else if (ev.key === "Escape") {
+        ev.stopPropagation();   // do not also close the customize panel
+        closeSuggest();
+      }
+    });
+    document.addEventListener("click", function (ev) {
+      var box = document.getElementById("suggest");
+      if (box.classList.contains("open")
+          && !box.contains(ev.target)
+          && ev.target !== document.getElementById("q"))
+        closeSuggest();
+    });
 
     /* ------------------------------------------------ background + glass -- */
 
@@ -1004,6 +1412,15 @@
 
     /* ------------------------------------------------------- Top Sites ---- */
 
+    // Fallback letter: the BASE DOMAIN's initial ("7" for 7-zip.org),
+    // never the "w" of a www. prefix — two "W" tiles for two different
+    // sites is a recognition failure.
+    function fallbackLetter(host) {
+      var h = String(host || "");
+      while (h.indexOf("www.") === 0) h = h.slice(4);
+      return (h.charAt(0) || "?").toUpperCase();
+    }
+
     function render() {
       var host = document.getElementById("topsites");
       if (!SITES.length) {
@@ -1034,7 +1451,7 @@
         icon.className = "icon";
         var letter = document.createElement("span");
         letter.className = "letter";       // one neutral fallback style
-        letter.textContent = (s.host.charAt(0) || "?").toUpperCase();
+        letter.textContent = fallbackLetter(s.host);
         if (s.favicon) {
           var img = document.createElement("img");
           img.src = s.favicon;
@@ -1158,27 +1575,9 @@
       if (ev.key === "Enter") document.getElementById("dlg-save").click();
     });
 
-    function layoutGrid() {
-      var grid = document.querySelector('.grid');
-      if (!grid || !SITES.length) return;
-      var n = SITES.length;
-      var avail = (grid.parentElement && grid.parentElement.clientWidth) || 612;
-      var gap = 10, minTile = 104, tile = 112;
-      // Columns that physically fit at the current width.
-      var fits = Math.max(1, Math.floor((avail + gap) / (minTile + gap)));
-      // Up to 6 sites: one balanced row. More: fill rows of at most 6 so
-      // the last row is never a lone tile (7 -> 4+3, 9 -> 5+4, 12 -> 6+6).
-      var cols = n <= 6 ? n : Math.ceil(n / Math.ceil(n / 6));
-      cols = Math.max(1, Math.min(cols, fits, 6));
-      grid.style.gridTemplateColumns =
-        'repeat(' + cols + ', minmax(0, ' + tile + 'px))';
-    }
-    window.addEventListener('resize', layoutGrid);
-
     render();
     renderGallery();
     applyAllPrefs();
-    layoutGrid();
   </script>
 </body>
 </html>

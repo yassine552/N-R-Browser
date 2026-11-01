@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 The NØR Browser authors
 # -*- coding: utf-8 -*-
 """Fills the .ts translation files with Arabic and French translations.
 
