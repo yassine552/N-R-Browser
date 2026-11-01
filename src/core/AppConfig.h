@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 The NØR Browser authors
 #pragma once
 
 #include <QObject>
@@ -127,7 +129,7 @@ public:
     // Real blur behind the glass surfaces (off -> higher-alpha fallback).
     bool newTabBlurEnabled() const;                   // default: true
     void setNewTabBlurEnabled(bool enabled);
-    // Search-bar glass opacity, 30..90 (percent). Default: 55.
+    // Search-bar glass opacity, 30..90 (percent). Default: 48.
     int newTabSearchOpacity() const;
     void setNewTabSearchOpacity(int percent);
     bool newTabShowTopSites() const;                  // default: true

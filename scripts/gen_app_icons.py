@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 The NØR Browser authors
 """Renders the NØR Browser application icon to PNG sizes for Linux
 (hicolor) and a Windows .ico. Run with a Python that has Pillow:
 

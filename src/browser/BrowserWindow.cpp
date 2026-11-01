@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 The NØR Browser authors
 #include "BrowserWindow.h"
 
 #include "AddressBar.h"
@@ -781,7 +783,11 @@ void BrowserWindow::showAboutDialog()
     QMessageBox::about(this, tr("About NØR Browser"),
                        tr("<b>NØR Browser %1</b><br/>A private-by-design web browser."
                           "<br/><br/>Built with Qt %2 and Qt WebEngine."
-                          "<br/>No accounts, no telemetry, no cloud.")
+                          "<br/>No accounts, no telemetry, no cloud."
+                          "<br/><br/>Free software under the GNU GPL v3 or later "
+                          "(GPL-3.0-or-later).<br/>"
+                          "\xC2\xA9 2026 The N\xC3\x98R Browser authors \xE2\x80\x94 see "
+                          "the LICENSE file.")
                            .arg(QStringLiteral(NOR_VERSION), QString::fromLatin1(qVersion())));
 }
 

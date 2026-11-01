@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 The NØR Browser authors
 """Generates the NØR Browser UI icon set (SVG) into resources/icons/.
 
 Design language: 24x24 viewBox, 2px round strokes, light purple-gray

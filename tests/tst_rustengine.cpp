@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 The NØR Browser authors
 // Unit tests for the RustAdblockBackend (brave/adblock-rust via the
 // adblock-sys C ABI): compatibility with the built-in engine's documented
 // semantics plus the extended capabilities ($domain, match-case, PSL,

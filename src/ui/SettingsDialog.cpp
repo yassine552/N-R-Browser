@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 The NØR Browser authors
 #include "SettingsDialog.h"
 #include "Theme.h"
 #include "IconProvider.h"

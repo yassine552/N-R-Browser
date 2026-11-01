@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 The NØR Browser authors
 # -*- coding: utf-8 -*-
 """Arabic translations for NØR Browser (Modern Standard Arabic).
 
@@ -29,8 +31,8 @@ AR = {
         "No bookmarks yet — press Ctrl+D to add this page":
             "لا توجد علامات مرجعية بعد — اضغط Ctrl+D لإضافة هذه الصفحة",
         "About NØR Browser": "حول NØR Browser",
-        "<b>NØR Browser %1</b><br/>A private-by-design web browser.<br/><br/>Built with Qt %2 and Qt WebEngine.<br/>No accounts, no telemetry, no cloud.":
-            "<b>NØR Browser %1</b><br/>متصفح ويب مصمم على أساس الخصوصية.<br/><br/>مبني باستخدام Qt %2 و Qt WebEngine.<br/>بلا حسابات، بلا تتبع، بلا تخزين سحابي.",
+        "<b>NØR Browser %1</b><br/>A private-by-design web browser.<br/><br/>Built with Qt %2 and Qt WebEngine.<br/>No accounts, no telemetry, no cloud.<br/><br/>Free software under the GNU GPL v3 or later (GPL-3.0-or-later).<br/>© 2026 The NØR Browser authors — see the LICENSE file.":
+            "<b>NØR Browser %1</b><br/>متصفح ويب مصمم على أساس الخصوصية.<br/><br/>مبني باستخدام Qt %2 و Qt WebEngine.<br/>بلا حسابات، بلا تتبع، بلا تخزين سحابي.<br/><br/>برنامج حرّ بموجب رخصة جنو العمومية الإصدار 3 أو أحدث (GPL-3.0-or-later).<br/>© 2026 مؤلفو NØR Browser — انظر ملف LICENSE.",
         "New Tab": "تبويب جديد",
         "Private": "خاص",
         "%1 requests blocked this session": "تم حظر %1 طلبًا في هذه الجلسة",

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 The NØR Browser authors
 // Unit tests for the SQLite stores (bookmarks + history) and settings
 // persistence (AppConfig), plus storage integrity / recovery and the
 // deferred site-storage wipe.

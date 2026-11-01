@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 The NØR Browser authors
 # -*- coding: utf-8 -*-
 """French translations for NØR Browser.
 
@@ -29,8 +31,8 @@ FR = {
         "No bookmarks yet — press Ctrl+D to add this page":
             "Aucun favori pour le moment — appuyez sur Ctrl+D pour ajouter cette page",
         "About NØR Browser": "À propos de NØR Browser",
-        "<b>NØR Browser %1</b><br/>A private-by-design web browser.<br/><br/>Built with Qt %2 and Qt WebEngine.<br/>No accounts, no telemetry, no cloud.":
-            "<b>NØR Browser %1</b><br/>Un navigateur web conçu pour respecter votre vie privée.<br/><br/>Construit avec Qt %2 et Qt WebEngine.<br/>Sans compte, sans télémétrie, sans cloud.",
+        "<b>NØR Browser %1</b><br/>A private-by-design web browser.<br/><br/>Built with Qt %2 and Qt WebEngine.<br/>No accounts, no telemetry, no cloud.<br/><br/>Free software under the GNU GPL v3 or later (GPL-3.0-or-later).<br/>© 2026 The NØR Browser authors — see the LICENSE file.":
+            "<b>NØR Browser %1</b><br/>Un navigateur web conçu pour respecter votre vie privée.<br/><br/>Construit avec Qt %2 et Qt WebEngine.<br/>Sans compte, sans télémétrie, sans cloud.<br/><br/>Logiciel libre sous licence GNU GPL v3 ou ultérieure (GPL-3.0-or-later).<br/>© 2026 Les auteurs de NØR Browser — voir le fichier LICENSE.",
         "New Tab": "Nouvel onglet",
         "Private": "Privée",
         "%1 requests blocked this session": "%1 requêtes bloquées durant cette session",

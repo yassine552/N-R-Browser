@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 The NØR Browser authors
 #include "AppConfig.h"
 
 #include <QSettings>
@@ -119,7 +121,7 @@ void AppConfig::initDefaults()
     if (!m_settings->contains(kKeyNtBlur))
         m_settings->setValue(kKeyNtBlur, true);
     if (!m_settings->contains(kKeyNtSearchOpacity))
-        m_settings->setValue(kKeyNtSearchOpacity, 55);
+        m_settings->setValue(kKeyNtSearchOpacity, 48);
     if (!m_settings->contains(kKeyNtShowTopSites))
         m_settings->setValue(kKeyNtShowTopSites, true);
     m_settings->sync();
@@ -358,7 +360,7 @@ void AppConfig::setNewTabBlurEnabled(bool enabled) { m_settings->setValue(kKeyNt
 int AppConfig::newTabSearchOpacity() const
 {
     // Clamped so a corrupt value can never make the field unreadable.
-    return qBound(30, m_settings->value(kKeyNtSearchOpacity, 55).toInt(), 90);
+    return qBound(30, m_settings->value(kKeyNtSearchOpacity, 48).toInt(), 90);
 }
 void AppConfig::setNewTabSearchOpacity(int percent)
 {
@@ -374,7 +376,7 @@ void AppConfig::resetNewTabCustomization()
     m_settings->setValue(kKeyNtBgEnabled, true);
     m_settings->setValue(kKeyNtBgId, QStringLiteral("nor-graphite"));
     m_settings->setValue(kKeyNtBlur, true);
-    m_settings->setValue(kKeyNtSearchOpacity, 55);
+    m_settings->setValue(kKeyNtSearchOpacity, 48);
     m_settings->setValue(kKeyNtShowTopSites, true);
     emit newTabCustomizationChanged();
 }

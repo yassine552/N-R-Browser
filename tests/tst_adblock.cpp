@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 The NØR Browser authors
 // Unit tests for the NØR privacy-filter engine: rule parsing, matching,
 // exceptions, options, allowlisting, and client decisions.
 #include <QtTest>

@@ -1,4 +1,7 @@
-// Windows resource for NØR Browser (compiled by RC when WIN32).
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 The NOR Browser authors
+// Windows resource for NOR Browser (compiled by RC when WIN32).
+// Kept ASCII-only: RC/windres default code pages vary.
 #include <windows.h>
 
 #define VER_FILEVERSION             1,0,0,0
@@ -29,7 +32,7 @@ BEGIN
             VALUE "FileDescription", "NOR Browser - private-by-design web browser"
             VALUE "FileVersion", VER_FILEVERSION_STR
             VALUE "InternalName", "nor-browser"
-            VALUE "LegalCopyright", "MIT License (c) 2026 The NOR Browser authors"
+            VALUE "LegalCopyright", "GPL-3.0-or-later (c) 2026 The NOR Browser authors"
             VALUE "OriginalFilename", "nor-browser.exe"
             VALUE "ProductName", "NOR Browser"
             VALUE "ProductVersion", VER_PRODUCTVERSION_STR

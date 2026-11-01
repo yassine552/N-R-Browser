@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 The NØR Browser authors
 // WebEngine profile lifecycle tests: single profile manager, persistent
 // vs off-the-record separation, and private-profile cleanup.
 //

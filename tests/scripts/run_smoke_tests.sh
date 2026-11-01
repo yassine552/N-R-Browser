@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 The NØR Browser authors
+#
 # NØR Browser — end-to-end smoke test runner.
 #
 # Starts the local test server and a virtual X display, then runs every

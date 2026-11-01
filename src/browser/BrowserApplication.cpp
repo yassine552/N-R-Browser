@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 The NØR Browser authors
 #include "BrowserApplication.h"
 
 #include "AdBlockClient.h"
@@ -31,9 +33,11 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QColor>
+#include <QFont>
 #include <QIcon>
 #include <QImage>
 #include <QJsonArray>
+#include <QPainter>
 #include <QPixmap>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -119,6 +123,11 @@ void BrowserApplication::createServices()
     m_bookmarks = new BookmarkStore(Paths::bookmarksDbPath(), this);
     m_history = new HistoryStore(Paths::historyDbPath(), this);
     m_topSites = new TopSitesStore(m_history, Paths::topSitesStatePath(), this);
+    // Search-engine result pages must never become "Top Sites": their
+    // titles ("x at DuckDuckGo") are queries, not destinations, and they
+    // outrank everything a user actually MEANT to visit. Pattern-based
+    // match (see TopSitesStore), refreshed when engines are edited.
+    m_topSites->setEngineUrlTemplates(searchEngineUrlTemplates());
     m_favicons = new FaviconStore(Paths::faviconsDir(), this);
     m_backgrounds = new BackgroundStore(Paths::backgroundsDir(), this);
     m_downloads = new DownloadManager(*m_config, this);
@@ -141,6 +150,28 @@ void BrowserApplication::connectServices()
     // update), refresh the serialized startup cache.
     connect(m_adBlock, &AdBlockClient::rulesChanged,
             m_filterLists, &FilterListManager::saveEngineCache);
+    // Engine list changed (added/edited/removed in Settings): refresh the
+    // search-pattern exclusion set the Top-Sites ranking uses.
+    connect(m_search, &SearchEngines::enginesChanged, this, [this]() {
+        m_topSites->setEngineUrlTemplates(searchEngineUrlTemplates());
+    });
+}
+
+QStringList BrowserApplication::searchEngineUrlTemplates() const
+{
+    // URL templates of every configured engine. The default engine is
+    // always present even if the stored list somehow misses it.
+    QStringList templates;
+    auto addEngine = [&templates](const SearchEngine &e) {
+        if (e.isValid() && !templates.contains(e.urlTemplate))
+            templates.append(e.urlTemplate);
+    };
+    if (m_search) {
+        addEngine(m_search->defaultEngine());
+        for (const SearchEngine &e : m_search->engines())
+            addEngine(e);
+    }
+    return templates;
 }
 
 bool BrowserApplication::initialize(const QUrl &startUrl, bool privateWindow)
@@ -1087,14 +1118,15 @@ int BrowserApplication::runSmokeTopSites(const QString &baseUrl, const QString &
     QStringList hosts;
     for (const QJsonValue &v : jsonField(j, "hosts").toArray())
         hosts.append(v.toObject().value(QLatin1String("h")).toString());
-    // 40 visits but 400 days old: decays to the BOTTOM of the list.
-    const bool staleLast = !hosts.isEmpty()
-                           && hosts.last() == QLatin1String("stale.example");
+    // 40 visits but 400 days old: below the derived-score floor, so it
+    // must not take a slot AT ALL ("most visited", not "least forgotten").
+    const bool staleGone = !jsonField(j, "stale").toBool()
+                           && !hosts.contains(QLatin1String("stale.example"));
     const bool orderOk = hosts.size() >= 4
                          && hosts.at(0) == QLatin1String("example.org")
                          && hosts.at(1) == QLatin1String("github.com");
     const bool dedupOk = hosts.count(QLatin1String("github.com")) == 1;
-    const bool rankedOk = seededTiles == 6 && orderOk && dedupOk && staleLast;
+    const bool rankedOk = seededTiles == 5 && orderOk && dedupOk && staleGone;
     smokeLine("topsites/ranking+grouping", rankedOk,
               QStringLiteral("tiles=%1 hosts=%2").arg(seededTiles).arg(hosts.join(QLatin1Char(','))));
     rankedOk ? ++pass : ++fail;
@@ -1330,29 +1362,44 @@ int BrowserApplication::runSmokeTopSites(const QString &baseUrl, const QString &
     shot(QStringLiteral("tab-switch.png"));
 
     // ------------------------------------------------------------------
-    // 9b) RESIZE: the grid re-flows (no lone/stretched tiles, no
-    //     horizontal overflow) at smaller window sizes.
+    // 9b) RESIZE: the tile flow re-wraps (centered rows, no stretched
+    //     tiles, no horizontal overflow) at smaller window sizes.
     // ------------------------------------------------------------------
     int resizeOkCount = 0;
     const QSize originalSize = window->size();
-    for (const QSize smaller : { QSize(900, 600), QSize(700, 480) }) {
+    // The chrome enforces a ~547px minimum window width, so the reflow
+    // needs enough tiles to overflow the content column: seed a few more
+    // live sites first (scratch profile — nothing persists).
+    for (int i = 0; i < 6; ++i)
+        seed(QStringLiteral("https://flow%1.example/").arg(i).toLatin1().constData(),
+             "Flow", 3, now - 86400);
+    QTest::qWait(500);
+    for (const QSize smaller : { QSize(900, 600), QSize(380, 480) }) {
         window->resize(smaller);
         QTest::qWait(500);
         goToNewTab(window);
         waitForLoad(window->currentView(), 20000);
         QTest::qWait(400);
         j = probeJson(window->currentView(),
-            QStringLiteral("(function(){var g=document.querySelector('.grid');"
-                           "var cols=g?(getComputedStyle(g).gridTemplateColumns"
-                           ".split(' ').length):0;"
-                           "return JSON.stringify({cols:cols,"
+            QStringLiteral("(function(){var tiles=[].slice.call("
+                           "document.querySelectorAll('a.site'));"
+                           "var rowsBy={};tiles.forEach(function(t){"
+                           "  rowsBy[t.offsetTop]=(rowsBy[t.offsetTop]||0)+1;});"
+                           "var rowCount=Object.keys(rowsBy).length;"
+                           "var g=document.querySelector('.grid');"
+                           "return JSON.stringify({rows:rowCount,"
+                           "tiles:tiles.length,"
+                           "iw:window.innerWidth,"
+                           "gw:g?g.clientWidth:0,"
                            "overflowX:document.documentElement.scrollWidth"
                            ">window.innerWidth+1});})()"));
-        const int cols = jsonField(j, "cols").toInt(-1);
+        const int rows = jsonField(j, "rows").toInt(-1);
+        const int tileCount = jsonField(j, "tiles").toInt(-1);
         const bool noOverflow = !jsonField(j, "overflowX").toBool();
-        // At 900px (~860 content) 6 tiles still fit in one row; at 700px
-        // they must re-flow into more columns, never overflow.
-        const bool okThis = noOverflow && cols >= 2 && cols <= 6;
+        // Wide window: one centered row is fine. Narrow window: the flow
+        // MUST wrap into several rows — and never overflow sideways.
+        const bool okThis = noOverflow && tileCount >= 1
+                            && (smaller.width() > 700 ? rows >= 1 : rows >= 2);
         if (okThis)
             ++resizeOkCount;
     }
@@ -1360,7 +1407,7 @@ int BrowserApplication::runSmokeTopSites(const QString &baseUrl, const QString &
     QTest::qWait(300);
     const bool resizeOk = resizeOkCount == 2;
     smokeLine("topsites/window-resize", resizeOk,
-              QStringLiteral("phases=%1/2").arg(resizeOkCount));
+              QStringLiteral("phases=%1/2 last=%2").arg(resizeOkCount).arg(j));
     resizeOk ? ++pass : ++fail;
 
     // ------------------------------------------------------------------
@@ -1697,6 +1744,57 @@ int BrowserApplication::runSmokeNewTab(const QString &screenshotDir)
     QTest::qWait(400);
     shot(QStringLiteral("newtab-search-focus.png"));
 
+    // ------------------------------------------------------------------
+    // 6b) OFFLINE search suggestions: typing "yout" opens the completion
+    //     dropdown offering the search action AND site matches — the user
+    //     gets "youtube" before finishing the word — with keyboard
+    //     selection, Escape closing, and ZERO layout shift.
+    // ------------------------------------------------------------------
+    j = probeJson(window->currentView(), QStringLiteral(
+        "(function(){var f=document.querySelector('form.search');"
+        "var r1=f.getBoundingClientRect();"
+        "var q=document.getElementById('q');q.value='yout';"
+        "q.dispatchEvent(new Event('input'));"
+        "var s=document.getElementById('suggest');"
+        "var openAfterInput=s.classList.contains('open');"
+        "var rows=s.querySelectorAll('.s-row');"
+        "var names=[];for(var i=0;i<rows.length;i++)"
+        "  names.push(rows[i].querySelector('.s-name').textContent);"
+        "q.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown'}));"
+        "var selEl=s.querySelector('.s-row.sel');"
+        "var selDown=selEl?Array.prototype.indexOf.call(s.children,selEl):-9;"
+        "q.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}));"
+        "var closedAfterEsc=!s.classList.contains('open');"
+        "var r2=f.getBoundingClientRect();"
+        "q.value='';"
+        "return JSON.stringify({"
+        "open:openAfterInput,"
+        "rows:rows.length,"
+        "firstIsSearch:rows.length>0&&names[0]==='yout',"
+        "hasYoutube:names.some(function(n){return /youtube/i.test(n);}),"
+        "selDown:selDown,"
+        "closedAfterEsc:closedAfterEsc,"
+        "w1:r1.width,h1:r1.height,w2:r2.width,h2:r2.height});})()"));
+    ok = jsonField(j, "open").toBool()
+         && jsonField(j, "rows").toInt() >= 2
+         && jsonField(j, "firstIsSearch").toBool()
+         && jsonField(j, "hasYoutube").toBool()
+         && jsonField(j, "selDown").toInt() == 0
+         && jsonField(j, "closedAfterEsc").toBool()
+         && qFuzzyCompare(jsonField(j, "w1").toDouble(), jsonField(j, "w2").toDouble())
+         && jsonField(j, "h1").toDouble() == jsonField(j, "h2").toDouble();
+    smokeLine("newtab/suggest-offline", ok, j);
+    ok ? ++pass : ++fail;
+    // Reopen for the screenshot (visible dropdown over the glass bar).
+    pageAction(window, QStringLiteral(
+        "var q=document.getElementById('q');q.value='yout';"
+        "q.dispatchEvent(new Event('input'));"));
+    QTest::qWait(400);
+    shot(QStringLiteral("newtab-suggest.png"));
+    pageAction(window, QStringLiteral(
+        "var q=document.getElementById('q');q.value='';"
+        "q.dispatchEvent(new Event('input'));"));
+
     j = probeJson(window->currentView(), QStringLiteral(
         "(function(){document.getElementById('panel').classList.add('open');"
         "return '1';})()"));
@@ -1883,6 +1981,337 @@ int BrowserApplication::runSmokeNewTab(const QString &screenshotDir)
                       .arg(wtFail, ttFail, atFail));
         ok ? ++pass : ++fail;
         shot(QStringLiteral("newtab-titlesync-failed.png"));
+    }
+
+    window->close();
+    QTest::qWait(300);
+    printf("SMOKE RESULT pass=%d fail=%d\n", pass, fail);
+    fflush(stdout);
+    return fail == 0 ? 0 : 1;
+}
+
+// ---------------------------------------------------------------------------
+// runSmokeShowcase — the Final-Polish visual matrix, WITH REAL TILES.
+//
+// The plain newtab suite runs on a scratch profile (no history), so the
+// tiles never render. This mode seeds a realistic history — including the
+// duplicate-site patterns the user reported (many paths on one service,
+// www/bare spellings) — captures favicons, then photographs the finished
+// page over every background family, with the suggestion dropdown open,
+// with the customize panel open, in solid mode and in AR/FR/EN.
+// ---------------------------------------------------------------------------
+int BrowserApplication::runSmokeShowcase(const QString &screenshotDir)
+{
+    QDir().mkpath(screenshotDir);
+    const QString shots = screenshotDir.endsWith(QLatin1Char('/'))
+                              ? screenshotDir : screenshotDir + QLatin1Char('/');
+    int pass = 0, fail = 0;
+
+    auto shot = [this, &shots](const QString &name) {
+        if (!m_windows.isEmpty() && m_windows.first())
+            m_windows.first()->grab().save(shots + name);
+    };
+    auto jsonField = [](const QString &json, const char *name) -> QJsonValue {
+        const QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8());
+        return doc.object().value(QLatin1String(name));
+    };
+    auto pageAction = [](BrowserWindow *w, const QString &js) {
+        if (WebView *v = w->currentView())
+            v->page()->runJavaScript(js, [](const QVariant &) {});
+    };
+    auto reloadNewTab = [this](BrowserWindow *w) {
+        if (WebView *v = w->currentView())
+            v->load(QUrl(QStringLiteral("nor://newtab")));
+        if (w && w->currentView())
+            waitForLoad(w->currentView(), 20000);
+    };
+    auto bodyState = [this](BrowserWindow *w) {
+        return probeJson(w->currentView(),
+            QStringLiteral("(function(){var b=document.body,i=document.getElementById('bg');"
+                           "var tiles=[].map.call(document.querySelectorAll('a.site'),"
+                           "function(a){return new URL(a.href).host;});"
+                           "var bases={};var dup=0;"
+                           "tiles.forEach(function(h){"
+                           "  var p=h.replace(/^www\\./,'').split('.');"
+                           "  var b2=p.slice(-2).join('.');"
+                           "  if(bases[b2])dup++;else bases[b2]=1;});"
+                           "return JSON.stringify({"
+                           "bgOn:b.classList.contains('bg-on'),"
+                           "dark:b.classList.contains('dark-bg'),"
+                           "light:b.classList.contains('light-bg'),"
+                           "noBlur:b.classList.contains('no-blur'),"
+                           "loaded:!!(i&&i.naturalWidth>0),"
+                           "tiles:tiles.length,dup:dup,"
+                           "favicons:document.querySelectorAll('a.site img').length"
+                           "});})()"));
+    };
+    auto setBg = [&pageAction](BrowserWindow *w, const char *id) {
+        pageAction(w, QStringLiteral(
+            "location.href='nor://newtab/action/bg-set?id=%1';")
+            .arg(QString::fromLatin1(id)));
+    };
+
+    // ---- seed: a believable week of browsing, WITH the duplicate traps ----
+    const qint64 now = QDateTime::currentSecsSinceEpoch();
+    auto seed = [this](const char *url, const char *title, int visits, qint64 when) {
+        for (int i = 0; i < visits; ++i)
+            m_history->addVisit(QString::fromLatin1(url), QString::fromLatin1(title), when);
+    };
+    // YouTube via many deep links (the "same site many URLs" trap).
+    seed("https://www.youtube.com/", "YouTube", 18, now - 2 * 86400);
+    seed("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "Rick Astley - Never Gonna Give You Up", 4, now - 86400);
+    seed("https://www.youtube.com/shorts/x", "YouTube Shorts", 3, now - 86400);
+    seed("https://m.youtube.com/", "YouTube", 2, now - 3 * 86400);
+    // GitHub + deep link (path-merge trap).
+    seed("https://github.com/", "GitHub", 14, now - 86400);
+    seed("https://github.com/nor-browser", "NOR Repo", 5, now - 2 * 86400);
+    // Wikipedia www/bare spellings.
+    seed("https://www.wikipedia.org/", "Wikipedia", 9, now - 4 * 86400);
+    seed("https://wikipedia.org/", "Wikipedia", 3, now - 5 * 86400);
+    // Stack Overflow, Reddit, 7-Zip (user-reported duplicate), one stale.
+    seed("https://stackoverflow.com/", "Stack Overflow", 8, now - 86400);
+    seed("https://stackoverflow.com/questions/tagged/qt", "qt - Stack Overflow", 2, now - 2 * 86400);
+    seed("https://www.reddit.com/", "Reddit", 7, now - 3 * 86400);
+    seed("https://www.7-zip.org/", "7-Zip", 5, now - 6 * 86400);
+    seed("https://www.7-zip.org/download.html", "7-Zip Download", 3, now - 6 * 86400);
+    seed("https://old.stale.example/", "Ancient", 60, now - 500 * 86400);
+    QTest::qWait(500);   // debounce the Top-Sites refresh
+
+    // ---- favicons: five distinct, plausible marks (rounded tile + glyph) --
+    if (m_favicons) {
+        struct FavSeed { const char *url; QColor color; const char *letter; };
+        const FavSeed favs[] = {
+            { "https://www.youtube.com/", QColor(0xff, 0x00, 0x00), "Y" },
+            { "https://github.com/",     QColor(0x24, 0x29, 0x2e), "G" },
+            { "https://www.wikipedia.org/", QColor(0x11, 0x11, 0x11), "W" },
+            { "https://stackoverflow.com/", QColor(0xf4, 0x80, 0x24), "S" },
+            { "https://www.reddit.com/", QColor(0xff, 0x45, 0x00), "R" },
+        };
+        for (const FavSeed &f : favs) {
+            QPixmap pm(64, 64);
+            pm.fill(Qt::transparent);
+            QPainter p(&pm);
+            p.setRenderHint(QPainter::Antialiasing);
+            p.setBrush(f.color);
+            p.setPen(Qt::NoPen);
+            p.drawRoundedRect(4, 4, 56, 56, 14, 14);
+            p.setPen(QColor(255, 255, 255, 230));
+            QFont font = p.font();
+            font.setPixelSize(34);
+            font.setBold(true);
+            p.setFont(font);
+            p.drawText(pm.rect(), Qt::AlignCenter, QString::fromLatin1(f.letter));
+            p.end();
+            m_favicons->capture(QIcon(pm), QUrl(QString::fromLatin1(f.url)));
+        }
+        QTest::qWait(300);
+    }
+
+    BrowserWindow *window = createWindow(false);
+    window->resize(1366, 768);
+    QTest::qWait(500);
+    waitForLoad(window->currentView(), 20000);
+    QTest::qWait(800);
+
+    // ------------------------------------------------------------------
+    // A) Every background family WITH real tiles. The no-duplicate
+    //    guarantee is asserted on every single shot (dup must stay 0).
+    // ------------------------------------------------------------------
+    struct BgCase { const char *id; const char *file; bool dark; };
+    const BgCase cases[] = {
+        { "nor-graphite", "showcase-graphite.png", true  },  // default, dark
+        { "nor-nebula",   "showcase-nebula.png",   true  },  // busy space
+        { "nor-aurora",   "showcase-aurora.png",   true  },  // nature/abstract
+        { "nor-ridge",    "showcase-ridge.png",    true  },  // cinematic
+        { "nor-slate",    "showcase-slate.png",    true  },  // minimal tech
+        { "nor-dune",     "showcase-dune.png",     true  },  // warm dusk
+        { "nor-zenith",   "showcase-zenith.png",   false },  // light
+        { "nor-mesh",     "showcase-mesh.png",     false },  // light minimal
+    };
+    for (const BgCase &c : cases) {
+        setBg(window, c.id);
+        QTest::qWait(700);
+        reloadNewTab(window);
+        QTest::qWait(600);
+        const QString j = bodyState(window);
+        const bool ok = jsonField(j, "bgOn").toBool()
+                        && jsonField(j, "loaded").toBool()
+                        && (c.dark ? jsonField(j, "dark").toBool()
+                                   : jsonField(j, "light").toBool())
+                        && jsonField(j, "tiles").toInt() >= 6
+                        && jsonField(j, "dup").toInt() == 0;
+        smokeLine(QStringLiteral("showcase/bg-%1").arg(QString::fromLatin1(c.id)), ok, j);
+        ok ? ++pass : ++fail;
+        shot(QString::fromLatin1(c.file));
+    }
+
+    // ------------------------------------------------------------------
+    // B) Suggestions over glass: typing a PARTIAL word ("yout") offers
+    //    the completion before the word is finished, on the busy space
+    //    background, with tiles behind. Also a multi-match query ("g").
+    // ------------------------------------------------------------------
+    setBg(window, "nor-nebula");
+    QTest::qWait(400);
+    reloadNewTab(window);
+    QTest::qWait(600);
+    {
+        const QString j = probeJson(window->currentView(), QStringLiteral(
+            "(function(){var q=document.getElementById('q');q.focus();"
+            "q.value='yout';q.dispatchEvent(new Event('input'));"
+            "var s=document.getElementById('suggest');"
+            "var rows=s.querySelectorAll('.s-row');"
+            "var names=[];for(var i=0;i<rows.length;i++)"
+            "  names.push(rows[i].querySelector('.s-name').textContent);"
+            "return JSON.stringify({open:s.classList.contains('open'),"
+            "rows:rows.length,names:names,"
+            "hasYoutube:names.some(function(n){return /youtube/i.test(n);})});})()"));
+        const bool ok = jsonField(j, "open").toBool()
+                        && jsonField(j, "rows").toInt() >= 2
+                        && jsonField(j, "hasYoutube").toBool();
+        smokeLine("showcase/suggest-yout", ok, j);
+        ok ? ++pass : ++fail;
+        QTest::qWait(400);
+        shot(QStringLiteral("showcase-suggest-yout.png"));
+
+        const QString j2 = probeJson(window->currentView(), QStringLiteral(
+            "(function(){var q=document.getElementById('q');"
+            "q.value='g';q.dispatchEvent(new Event('input'));"
+            "var s=document.getElementById('suggest');"
+            "return JSON.stringify({rows:s.querySelectorAll('.s-row').length});})()"));
+        const bool ok2 = jsonField(j2, "rows").toInt() >= 4;
+        smokeLine("showcase/suggest-multi", ok2, j2);
+        ok2 ? ++pass : ++fail;
+        QTest::qWait(400);
+        shot(QStringLiteral("showcase-suggest-g.png"));
+        pageAction(window, QStringLiteral(
+            "var q=document.getElementById('q');q.value='';"
+            "q.dispatchEvent(new Event('input'));"));
+    }
+
+    // ------------------------------------------------------------------
+    // C) Customize panel open on a light background (readability of the
+    //    controls themselves, thumbs selected, sliders present).
+    // ------------------------------------------------------------------
+    setBg(window, "nor-zenith");
+    QTest::qWait(400);
+    reloadNewTab(window);
+    QTest::qWait(600);
+    pageAction(window, QStringLiteral(
+        "document.getElementById('panel').classList.add('open');"));
+    QTest::qWait(500);
+    {
+        const QString j = probeJson(window->currentView(), QStringLiteral(
+            "(function(){return JSON.stringify({"
+            "thumbs:document.querySelectorAll('#gallery .thumb').length,"
+            "selected:document.querySelectorAll('#gallery .thumb.selected').length,"
+            "slider:!!document.getElementById('opacity'),"
+            "blurChk:document.getElementById('chkBlur').checked,"
+            "sitesChk:document.getElementById('chkSites').checked});})()"));
+        const bool ok = jsonField(j, "thumbs").toInt() == 9
+                        && jsonField(j, "selected").toInt() == 1
+                        && jsonField(j, "slider").toBool()
+                        && jsonField(j, "blurChk").toBool()
+                        && jsonField(j, "sitesChk").toBool();
+        smokeLine("showcase/customize-panel", ok, j);
+        ok ? ++pass : ++fail;
+        shot(QStringLiteral("showcase-customize.png"));
+        pageAction(window, QStringLiteral(
+            "document.getElementById('panel').classList.remove('open');"));
+    }
+
+    // ------------------------------------------------------------------
+    // D) Solid color mode + blur-off fallback, still with tiles.
+    // ------------------------------------------------------------------
+    pageAction(window, QStringLiteral(
+        "location.href='nor://newtab/action/bg-set?id=';"));
+    QTest::qWait(500);
+    reloadNewTab(window);
+    QTest::qWait(600);
+    {
+        const QString j = bodyState(window);
+        const bool ok = !jsonField(j, "bgOn").toBool()
+                        && jsonField(j, "tiles").toInt() >= 6
+                        && jsonField(j, "dup").toInt() == 0;
+        smokeLine("showcase/solid-mode", ok, j);
+        ok ? ++pass : ++fail;
+        shot(QStringLiteral("showcase-solid.png"));
+    }
+    pageAction(window, QStringLiteral(
+        "location.href='nor://newtab/action/newtab-pref?blur=0';"));
+    QTest::qWait(300);
+    {
+        const QString j = bodyState(window);
+        const bool ok = jsonField(j, "noBlur").toBool()
+                        && jsonField(j, "tiles").toInt() >= 6;
+        smokeLine("showcase/blur-off", ok, j);
+        ok ? ++pass : ++fail;
+        shot(QStringLiteral("showcase-blur-off.png"));
+        pageAction(window, QStringLiteral(
+            "location.href='nor://newtab/action/newtab-pref?blur=1';"));
+        QTest::qWait(300);
+    }
+
+    // ------------------------------------------------------------------
+    // E) Arabic (RTL) and French with tiles + suggestions.
+    // ------------------------------------------------------------------
+    m_languages->setLanguage(QStringLiteral("ar"));
+    QTest::qWait(500);
+    reloadNewTab(window);
+    QTest::qWait(600);
+    {
+        const QString j = probeJson(window->currentView(), QStringLiteral(
+            "(function(){var q=document.getElementById('q');"
+            "q.value='يوت';q.dispatchEvent(new Event('input'));"
+            "var s=document.getElementById('suggest');"
+            "return JSON.stringify({"
+            "dir:document.documentElement.getAttribute('dir'),"
+            "tiles:document.querySelectorAll('a.site').length,"
+            "open:s.classList.contains('open')});})()"));
+        const bool ok = jsonField(j, "dir").toString() == QLatin1String("rtl")
+                        && jsonField(j, "tiles").toInt() >= 6;
+        smokeLine("showcase/rtl-arabic", ok, j);
+        ok ? ++pass : ++fail;
+        QTest::qWait(400);
+        shot(QStringLiteral("showcase-ar.png"));
+        pageAction(window, QStringLiteral(
+            "var q=document.getElementById('q');q.value='';"
+            "q.dispatchEvent(new Event('input'));"));
+    }
+    m_languages->setLanguage(QStringLiteral("fr"));
+    QTest::qWait(500);
+    reloadNewTab(window);
+    QTest::qWait(600);
+    {
+        const QString j = probeJson(window->currentView(), QStringLiteral(
+            "(function(){return JSON.stringify({"
+            "dir:document.documentElement.getAttribute('dir'),"
+            "ph:document.getElementById('q').placeholder,"
+            "tiles:document.querySelectorAll('a.site').length});})()"));
+        const bool ok = jsonField(j, "dir").toString() == QLatin1String("ltr")
+                        && jsonField(j, "ph").toString().contains(QLatin1String("Rechercher"))
+                        && jsonField(j, "tiles").toInt() >= 6;
+        smokeLine("showcase/french", ok, j);
+        ok ? ++pass : ++fail;
+        shot(QStringLiteral("showcase-fr.png"));
+    }
+    m_languages->setLanguage(QStringLiteral("en"));
+    QTest::qWait(400);
+
+    // ---- leave the profile in the shipped default state ----
+    pageAction(window, QStringLiteral(
+        "location.href='nor://newtab/action/newtab-reset';"));
+    QTest::qWait(600);
+    reloadNewTab(window);
+    QTest::qWait(500);
+    {
+        const QString j = bodyState(window);
+        const bool ok = jsonField(j, "bgOn").toBool()
+                        && !jsonField(j, "noBlur").toBool()
+                        && jsonField(j, "tiles").toInt() >= 6
+                        && jsonField(j, "dup").toInt() == 0;
+        smokeLine("showcase/reset-defaults", ok, j);
+        ok ? ++pass : ++fail;
+        shot(QStringLiteral("showcase-reset.png"));
     }
 
     window->close();

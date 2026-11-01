@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 The NØR Browser authors
 // Unit tests for FilterListManager: remote list downloads, conditional
 // requests (ETag/304), corrupt-download rejection, offline behaviour and
 // the serialized engine startup cache.

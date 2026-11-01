@@ -1,25 +1,53 @@
 # Third-Party Notices for NØR Browser
 
-This file lists the third-party open-source components that are compiled into NØR Browser when the adblock-rust backend is enabled (`NOR_ADBLOCK_BACKEND=Rust`, the default when a Rust toolchain is available), together with their licenses. Versions are the exact versions resolved by Cargo and recorded in `adblock-sys/Cargo.lock`.
+This file lists the third-party open-source components that are compiled into NØR Browser when the adblock-rust backend is enabled (`NOR_ADBLOCK_BACKEND=Rust`, the default when a Rust toolchain is available), together with their licenses. Versions are the exact versions resolved by Cargo and recorded in `adblock-sys/Cargo.lock`. Regenerate with `scripts/gen_third_party_notices.py`.
 
-NØR Browser itself is licensed under the MIT license (see `LICENSE`).
+NØR Browser itself is free software licensed under the **GNU General
+Public License v3.0 or later** (`GPL-3.0-or-later`, see `LICENSE`).
+
+The `adblock-sys` Rust C-ABI shim (`adblock-sys/Cargo.toml`,
+`adblock-sys/src/lib.rs`, `adblock-sys/include/nor_adblock.h`) is
+original NØR Browser code deliberately kept under **MPL-2.0**, like the
+MPL-2.0 `adblock-rust` engine it wraps. MPL-2.0 §3.3 ("Distribution of
+a Larger Work") permits those files to be compiled into and distributed
+as part of this larger GPL-3.0-or-later application, **while they
+remain under MPL-2.0** and keep their MPL obligations: their full
+source is shipped in this source archive (§3.1/§3.2) and their license
+notices are preserved (§3.4). This is *not* a secondary GPL license:
+GPL-3.0 is not among the Secondary Licenses defined in MPL-2.0 §1.12
+(those are GPLv2, LGPLv2.1 and AGPLv3), so no such grant is claimed or
+needed — the Larger Work provision of §3.3 is what applies.
+
+Qt is not redistributed in this archive and is linked dynamically at
+runtime. Qt Core/Gui/Widgets/Network/Sql/Test are offered by The Qt
+Company under LGPL-3.0-only OR GPL-3.0-only OR GPL-2.0-only OR
+commercial terms; Qt WebEngine's Qt-specific parts under LGPL-3.0 OR
+GPL-3.0 OR GPL-2.0 OR commercial, while its embedded Chromium/Blink
+portion carries its own separate third-party licenses (predominantly
+BSD-3-Clause, the most restrictive being LGPL-2.1, plus ICU under the
+ICU license). See `docs/DEPENDENCIES.md` for the per-module breakdown
+and binary-distribution obligations.
 
 ## Bundled assets
 
 | Asset | Source | License |
 |---|---|---|
-| Noto Sans Arabic (Regular) | Noto project — https://github.com/notofonts/noto-fonts (hinted/ttf/NotoSansArabic) | SIL Open Font License 1.1 — full text in `resources/fonts/OFL.txt` |
-| Noto Naskh Arabic (Regular) | Noto project — https://github.com/notofonts/noto-fonts (hinted/ttf/NotoNaskhArabic) | SIL Open Font License 1.1 — full text in `resources/fonts/OFL.txt` |
-| EasyList (downloaded at runtime, cached) | https://easylist.to/ | GNU GPL 3.0 / free for use — see https://easylist.to/pages/licence.html |
-| EasyPrivacy (downloaded at runtime, cached) | https://easylist.to/ | GNU GPL 3.0 / free for use — see https://easylist.to/pages/licence.html |
+| Noto Sans Arabic (Regular) | Noto project — https://github.com/notofonts (hinted/ttf/NotoSansArabic) | SIL Open Font License 1.1 — full text in `resources/fonts/OFL.txt` |
+| Noto Naskh Arabic (Regular) | Noto project — https://github.com/notofonts (hinted/ttf/NotoNaskhArabic) | SIL Open Font License 1.1 — full text in `resources/fonts/OFL.txt` |
+| New-tab backgrounds (`resources/backgrounds/nor-*.jpg` + thumbnails) | original artworks, procedurally generated for this project (no third-party sources) | CC0 1.0 / public domain — see `resources/backgrounds/README.md` |
 
-The filter lists are NOT compiled into the binary: they are downloaded on
-the user's machine when automatic updates are enabled (or skipped entirely
-offline), and remain under their authors' licenses.
+Original NØR Browser assets (SVG icons, app icons, the starter
+blocklist, translations) are part of the GPL-3.0-or-later work and are
+not listed here as third-party material — see `docs/DEPENDENCIES.md`.
+
+The EasyList and EasyPrivacy filter lists are NOT compiled into the
+binary: they are downloaded on the user's machine when automatic
+updates are enabled (or skipped entirely offline) and remain under
+their authors' terms.
 
 ## Component summary
 
-| Component | Version | License |
+| Component | Version | License (as declared in its manifest) |
 |---|---|---|
 | adblock | 0.13.5 | MPL-2.0 |
 | addr | 0.15.6 | MIT/Apache-2.0 |
@@ -82,61 +110,11 @@ offline), and remain under their authors' licenses.
 | zerovec-derive | 0.11.7 | Unicode-3.0 |
 | zmij | 1.0.23 | MIT |
 
-All of the above licenses are permissive and compatible with the distribution of NØR Browser. Where a dependency offers a choice ("MIT OR Apache-2.0", "Unlicense OR MIT"), the MIT/Apache-2.0 terms apply as the combination actually compiled in.
+All of the above third-party licenses are permissive or weak-copyleft and compatible with the distribution of NØR Browser as described above. Where a dependency offers a choice ("MIT OR Apache-2.0", "Unlicense OR MIT"), all options of that choice are reproduced below; the crates are consumed as published.
 
 ## License texts
 
-### Apache-2.0
-
-Applies to: flatbuffers 25.12.19
-
-(License text not present in the local registry cache; see the upstream repository.)
-
-### Apache-2.0/MIT
-
-Applies to: idna_adapter 1.2.2, rustc-hash 2.1.3, utf8_iter 1.1.0, utf_types 1.0.0
-
-The NØR Browser C-ABI shim itself; see `LICENSE` for the project license and `adblock-sys/src/lib.rs` for the copyright notice required by MPL-2.0 §3.1 (see below).
-
-### MIT
-
-Applies to: seahash 4.1.0, synstructure 0.14.0, zmij 1.0.23
-
-(License text not present in the local registry cache; see the upstream repository.)
-
-### MIT/Apache-2.0
-
-Applies to: addr 0.15.6, arrayvec 0.7.8, base64 0.22.1, bitflags 2.13.2, displaydoc 0.2.7, either 1.19.0, idna 1.1.0, itertools 0.14.0, itoa 1.0.18, percent-encoding 2.3.2, proc-macro2 1.0.107, psl 2.1.245, psl-types 2.0.11, quote 1.0.47, regex 1.13.1, regex-automata 0.4.18, regex-syntax 0.8.11, rustc_version 0.4.1, semver 1.0.28, serde 1.0.229, serde_core 1.0.229, serde_derive 1.0.229, serde_json 1.0.154, smallvec 1.16.4, stable_deref_trait 1.2.1, syn 2.0.119, syn 3.0.9, thiserror 1.0.69, thiserror-impl 1.0.69
-
-```
-MIT License
-
-Copyright (c) 2016 Rushmore Mushambi
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-### MIT/Apache-2.0 AND Unicode-3.0
-
-Applies to: unicode-ident 1.0.27
-
-The NØR Browser C-ABI shim itself; see `LICENSE` for the project license and `adblock-sys/src/lib.rs` for the copyright notice required by MPL-2.0 §3.1 (see below).
+Each text below is the standard form of that license. Every crate listed under it carries **its own copyright holders** — the copyright notices for each crate are contained in its own LICENSE file in the upstream distribution and in the local cargo registry cache; they are not merged into this document.
 
 ### MPL-2.0
 
@@ -518,15 +496,280 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   defined by the Mozilla Public License, v. 2.0.
 ```
 
-### MPL-2.0 (NOR Browser shim)
+### MIT
 
-Applies to: nor-adblock-sys 1.0.0
+Applies to: addr 0.15.6, aho-corasick 1.1.5, arrayvec 0.7.8, base64 0.22.1, bitflags 2.13.2, displaydoc 0.2.7, either 1.19.0, idna 1.1.0, idna_adapter 1.2.2, itertools 0.14.0, itoa 1.0.18, memchr 2.8.3, percent-encoding 2.3.2, proc-macro2 1.0.107, psl 2.1.245, psl-types 2.0.11, quote 1.0.47, regex 1.13.1, regex-automata 0.4.18, regex-syntax 0.8.11, rustc-hash 2.1.3, rustc_version 0.4.1, seahash 4.1.0, semver 1.0.28, serde 1.0.229, serde_core 1.0.229, serde_derive 1.0.229, serde_json 1.0.154, smallvec 1.16.4, stable_deref_trait 1.2.1, syn 2.0.119, syn 3.0.9, synstructure 0.14.0, thiserror 1.0.69, thiserror-impl 1.0.69, unicode-ident 1.0.27, utf8_iter 1.1.0, utf_types 1.0.0, zmij 1.0.23
 
-The NØR Browser C-ABI shim itself; see `LICENSE` for the project license and `adblock-sys/src/lib.rs` for the copyright notice required by MPL-2.0 §3.1 (see below).
+```
+Copyright (c) The rust-url developers
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+```
+
+### Apache-2.0
+
+Applies to: addr 0.15.6, arrayvec 0.7.8, base64 0.22.1, bitflags 2.13.2, displaydoc 0.2.7, either 1.19.0, flatbuffers 25.12.19, idna 1.1.0, idna_adapter 1.2.2, itertools 0.14.0, itoa 1.0.18, percent-encoding 2.3.2, proc-macro2 1.0.107, psl 2.1.245, psl-types 2.0.11, quote 1.0.47, regex 1.13.1, regex-automata 0.4.18, regex-syntax 0.8.11, rustc-hash 2.1.3, rustc_version 0.4.1, semver 1.0.28, serde 1.0.229, serde_core 1.0.229, serde_derive 1.0.229, serde_json 1.0.154, smallvec 1.16.4, stable_deref_trait 1.2.1, syn 2.0.119, syn 3.0.9, thiserror 1.0.69, thiserror-impl 1.0.69, unicode-ident 1.0.27, utf8_iter 1.1.0, utf_types 1.0.0
+
+```
+                              Apache License
+                        Version 2.0, January 2004
+                     http://www.apache.org/licenses/
+
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+1. Definitions.
+
+   "License" shall mean the terms and conditions for use, reproduction,
+   and distribution as defined by Sections 1 through 9 of this document.
+
+   "Licensor" shall mean the copyright owner or entity authorized by
+   the copyright owner that is granting the License.
+
+   "Legal Entity" shall mean the union of the acting entity and all
+   other entities that control, are controlled by, or are under common
+   control with that entity. For the purposes of this definition,
+   "control" means (i) the power, direct or indirect, to cause the
+   direction or management of such entity, whether by contract or
+   otherwise, or (ii) ownership of fifty percent (50%) or more of the
+   outstanding shares, or (iii) beneficial ownership of such entity.
+
+   "You" (or "Your") shall mean an individual or Legal Entity
+   exercising permissions granted by this License.
+
+   "Source" form shall mean the preferred form for making modifications,
+   including but not limited to software source code, documentation
+   source, and configuration files.
+
+   "Object" form shall mean any form resulting from mechanical
+   transformation or translation of a Source form, including but
+   not limited to compiled object code, generated documentation,
+   and conversions to other media types.
+
+   "Work" shall mean the work of authorship, whether in Source or
+   Object form, made available under the License, as indicated by a
+   copyright notice that is included in or attached to the work
+   (an example is provided in the Appendix below).
+
+   "Derivative Works" shall mean any work, whether in Source or Object
+   form, that is based on (or derived from) the Work and for which the
+   editorial revisions, annotations, elaborations, or other modifications
+   represent, as a whole, an original work of authorship. For the purposes
+   of this License, Derivative Works shall not include works that remain
+   separable from, or merely link (or bind by name) to the interfaces of,
+   the Work and Derivative Works thereof.
+
+   "Contribution" shall mean any work of authorship, including
+   the original version of the Work and any modifications or additions
+   to that Work or Derivative Works thereof, that is intentionally
+   submitted to Licensor for inclusion in the Work by the copyright owner
+   or by an individual or Legal Entity authorized to submit on behalf of
+   the copyright owner. For the purposes of this definition, "submitted"
+   means any form of electronic, verbal, or written communication sent
+   to the Licensor or its representatives, including but not limited to
+   communication on electronic mailing lists, source code control systems,
+   and issue tracking systems that are managed by, or on behalf of, the
+   Licensor for the purpose of discussing and improving the Work, but
+   excluding communication that is conspicuously marked or otherwise
+   designated in writing by the copyright owner as "Not a Contribution."
+
+   "Contributor" shall mean Licensor and any individual or Legal Entity
+   on behalf of whom a Contribution has been received by Licensor and
+   subsequently incorporated within the Work.
+
+2. Grant of Copyright License. Subject to the terms and conditions of
+   this License, each Contributor hereby grants to You a perpetual,
+   worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+   copyright license to reproduce, prepare Derivative Works of,
+   publicly display, publicly perform, sublicense, and distribute the
+   Work and such Derivative Works in Source or Object form.
+
+3. Grant of Patent License. Subject to the terms and conditions of
+   this License, each Contributor hereby grants to You a perpetual,
+   worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+   (except as stated in this section) patent license to make, have made,
+   use, offer to sell, sell, import, and otherwise transfer the Work,
+   where such license applies only to those patent claims licensable
+   by such Contributor that are necessarily infringed by their
+   Contribution(s) alone or by combination of their Contribution(s)
+   with the Work to which such Contribution(s) was submitted. If You
+   institute patent litigation against any entity (including a
+   cross-claim or counterclaim in a lawsuit) alleging that the Work
+   or a Contribution incorporated within the Work constitutes direct
+   or contributory patent infringement, then any patent licenses
+   granted to You under this License for that Work shall terminate
+   as of the date such litigation is filed.
+
+4. Redistribution. You may reproduce and distribute copies of the
+   Work or Derivative Works thereof in any medium, with or without
+   modifications, and in Source or Object form, provided that You
+   meet the following conditions:
+
+   (a) You must give any other recipients of the Work or
+       Derivative Works a copy of this License; and
+
+   (b) You must cause any modified files to carry prominent notices
+       stating that You changed the files; and
+
+   (c) You must retain, in the Source form of any Derivative Works
+       that You distribute, all copyright, patent, trademark, and
+       attribution notices from the Source form of the Work,
+       excluding those notices that do not pertain to any part of
+       the Derivative Works; and
+
+   (d) If the Work includes a "NOTICE" text file as part of its
+       distribution, then any Derivative Works that You distribute must
+       include a readable copy of the attribution notices contained
+       within such NOTICE file, excluding those notices that do not
+       pertain to any part of the Derivative Works, in at least one
+       of the following places: within a NOTICE text file distributed
+       as part of the Derivative Works; within the Source form or
+       documentation, if provided along with the Derivative Works; or,
+       within a display generated by the Derivative Works, if and
+       wherever such third-party notices normally appear. The contents
+       of the NOTICE file are for informational purposes only and
+       do not modify the License. You may add Your own attribution
+       notices within Derivative Works that You distribute, alongside
+       or as an addendum to the NOTICE text from the Work, provided
+       that such additional attribution notices cannot be construed
+       as modifying the License.
+
+   You may add Your own copyright statement to Your modifications and
+   may provide additional or different license terms and conditions
+   for use, reproduction, or distribution of Your modifications, or
+   for any such Derivative Works as a whole, provided Your use,
+   reproduction, and distribution of the Work otherwise complies with
+   the conditions stated in this License.
+
+5. Submission of Contributions. Unless You explicitly state otherwise,
+   any Contribution intentionally submitted for inclusion in the Work
+   by You to the Licensor shall be under the terms and conditions of
+   this License, without any additional terms or conditions.
+   Notwithstanding the above, nothing herein shall supersede or modify
+   the terms of any separate license agreement you may have executed
+   with Licensor regarding such Contributions.
+
+6. Trademarks. This License does not grant permission to use the trade
+   names, trademarks, service marks, or product names of the Licensor,
+   except as required for reasonable and customary use in describing the
+   origin of the Work and reproducing the content of the NOTICE file.
+
+7. Disclaimer of Warranty. Unless required by applicable law or
+   agreed to in writing, Licensor provides the Work (and each
+   Contributor provides its Contributions) on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+   implied, including, without limitation, any warranties or conditions
+   of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
+   PARTICULAR PURPOSE. You are solely responsible for determining the
+   appropriateness of using or redistributing the Work and assume any
+   risks associated with Your exercise of permissions under this License.
+
+8. Limitation of Liability. In no event and under no legal theory,
+   whether in tort (including negligence), contract, or otherwise,
+   unless required by applicable law (such as deliberate and grossly
+   negligent acts) or agreed to in writing, shall any Contributor be
+   liable to You for damages, including any direct, indirect, special,
+   incidental, or consequential damages of any character arising as a
+   result of this License or out of the use or inability to use the
+   Work (including but not limited to damages for loss of goodwill,
+   work stoppage, computer failure or malfunction, or any and all
+   other commercial damages or losses), even if such Contributor
+   has been advised of the possibility of such damages.
+
+9. Accepting Warranty or Additional Liability. While redistributing
+   the Work or Derivative Works thereof, You may choose to offer,
+   and charge a fee for, acceptance of support, warranty, indemnity,
+   or other liability obligations and/or rights consistent with this
+   License. However, in accepting such obligations, You may act only
+   on Your own behalf and on Your sole responsibility, not on behalf
+   of any other Contributor, and only if You agree to indemnify,
+   defend, and hold each Contributor harmless for any liability
+   incurred by, or claims asserted against, such Contributor by reason
+   of your accepting any such warranty or additional liability.
+
+END OF TERMS AND CONDITIONS
+
+APPENDIX: How to apply the Apache License to your work.
+
+   To apply the Apache License to your work, attach the following
+   boilerplate notice, with the fields enclosed by brackets "[]"
+   replaced with your own identifying information. (Don't include
+   the brackets!)  The text should be enclosed in the appropriate
+   comment syntax for the file format. We also recommend that a
+   file or class name and description of purpose be included on the
+   same "printed page" as the copyright notice for easier
+   identification within third-party archives.
+
+Copyright [yyyy] [name of copyright owner]
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
+
+### Unlicense
+
+Applies to: aho-corasick 1.1.5, memchr 2.8.3
+
+```
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <http://unlicense.org/>
+```
 
 ### Unicode-3.0
 
-Applies to: icu_collections 2.4.0, icu_locale_core 2.4.0, icu_normalizer 2.4.0, icu_normalizer_data 2.4.0, icu_properties 2.4.0, icu_properties_data 2.4.0, icu_provider 2.4.0, litemap 0.8.3, potential_utf 0.1.6, tinystr 0.8.5, writeable 0.6.4, yoke 0.8.4, yoke-derive 0.8.4, zerofrom 0.1.8, zerofrom-derive 0.1.8, zerotrie 0.2.5, zerovec 0.11.9, zerovec-derive 0.11.7
+Applies to: icu_collections 2.4.0, icu_locale_core 2.4.0, icu_normalizer 2.4.0, icu_normalizer_data 2.4.0, icu_properties 2.4.0, icu_properties_data 2.4.0, icu_provider 2.4.0, litemap 0.8.3, potential_utf 0.1.6, tinystr 0.8.5, unicode-ident 1.0.27, writeable 0.6.4, yoke 0.8.4, yoke-derive 0.8.4, zerofrom 0.1.8, zerofrom-derive 0.1.8, zerotrie 0.2.5, zerovec 0.11.9, zerovec-derive 0.11.7
 
 ```
 UNICODE LICENSE V3
@@ -577,15 +820,15 @@ Portions of ICU4X may have been adapted from ICU4C and/or ICU4J.
 ICU 1.8.1 to ICU 57.1 © 1995-2016 International Business Machines Corporation and others.
 ```
 
-### Unlicense/MIT
+### MPL-2.0 — the NØR Browser shim (`nor-adblock-sys`)
 
-Applies to: aho-corasick 1.1.5, memchr 2.8.3
+Applies to: nor-adblock-sys 1.0.0
 
-The NØR Browser C-ABI shim itself; see `LICENSE` for the project license and `adblock-sys/src/lib.rs` for the copyright notice required by MPL-2.0 §3.1 (see below).
+The C-ABI shim between the GPL-3.0-or-later C++ application and the MPL-2.0 `adblock-rust` engine is original NØR Browser code, deliberately licensed under MPL-2.0 (`adblock-sys/Cargo.toml`, `license = "MPL-2.0"`). Its source files — `adblock-sys/src/lib.rs` and `adblock-sys/include/nor_adblock.h` — carry MPL-2.0 SPDX identifiers and the Exhibit A notice, are distributed in full in this source archive, and are compiled into the larger GPL-3.0-or-later work under MPL-2.0 §3.3 as explained in the introduction. The MPL-2.0 full text above applies to them as well.
 
 ## Attribution notes
 
 - **brave/adblock-rust** (https://github.com/brave/adblock-rust) — the ad-blocking engine. Copyright (c) the Brave adblock-rust authors. MPL-2.0. The NØR Browser integration does not modify the crate; it is consumed as published on crates.io, pinned to exactly 0.13.5 in `adblock-sys/Cargo.toml`.
 - **Public Suffix List** — embedded inside the `addr` crate (registry-suffix data). https://publicsuffix.org — see the `addr`/`psl` crate license terms above.
-- **Qt 6 / Qt WebEngine** (The Qt Company, LGPL-3.0 / GPL-3.0 as applicable) is linked dynamically and is NOT redistributed inside the NØR source archive; see `docs/DEPENDENCIES.md` for build requirements.
-- Filter lists (EasyList, EasyPrivacy) are downloaded at runtime from https://easylist.to under their own terms; they are cached in the user's profile directory and are not redistributed inside this archive except as offline test fixtures under `tests/fixtures/filterlists/` for the automated test suite.
+- **Qt 6 / Qt WebEngine** (Copyright (c) The Qt Company Ltd and contributors) — linked dynamically, NOT redistributed inside the NØR source archive; per-module license options are documented in `docs/DEPENDENCIES.md`. Qt WebEngine additionally embeds Chromium and other third-party code under their own licenses (BSD-3-Clause and others — most restrictive LGPL-2.1); those notices travel with the Qt WebEngine packages you obtain, not with this archive.
+- **EasyList / EasyPrivacy** (https://easylist.to) — downloaded at runtime under their own terms. The EasyList repository contents are dual-licensed GPL-3.0-or-later OR CC-BY-SA-3.0-or-later, with attribution to "The EasyList authors (https://easylist.to/)"; the easylist.to licence page notes that externally-hosted files (including EasyPrivacy) may carry their own conditions. Offline test snapshots are redistributed inside this archive as `tests/fixtures/filterlists/` for the automated test suite, under those same upstream terms.

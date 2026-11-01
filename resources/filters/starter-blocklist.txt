@@ -1,3 +1,6 @@
+! SPDX-License-Identifier: GPL-3.0-or-later
+! SPDX-FileCopyrightText: 2026 The NØR Browser authors
+!
 ! NØR Browser — built-in starter blocklist
 ! ---------------------------------------------------------------
 ! A curated, conservative list of well-known advertising and
